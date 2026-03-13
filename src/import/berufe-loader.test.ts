@@ -14,11 +14,22 @@ describe('BerufeLoader', () => {
       expect(loader.getAllBerufe().length).toBeGreaterThan(0)
     })
 
-    test('throws error for missing file', async () => {
+    test('auto-downloads missing file', async () => {
+      const tempFile = '/tmp/test_auto_download.xlsx'
+      // Remove if exists
+      if (fs.existsSync(tempFile)) {
+        fs.unlinkSync(tempFile)
+      }
+      
       const loader = new BerufeLoader()
-      expect(async () => {
-        await loader.load('nonexistent.xlsx')
-      }).toThrow()
+      await loader.load(tempFile)
+      
+      // File should now exist
+      expect(fs.existsSync(tempFile)).toBe(true)
+      expect(loader.getAllBerufe().length).toBeGreaterThan(0)
+      
+      // Cleanup
+      fs.unlinkSync(tempFile)
     })
 
     test('throws error for missing sheet', async () => {

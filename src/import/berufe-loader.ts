@@ -1,10 +1,31 @@
 import * as XLSX from 'xlsx'
+import * as fs from 'node:fs'
+import * as path from 'node:path'
 import type { Beruf, LernfeldId } from '../types'
+
+const DEFAULT_DATA_URL = 'https://schulehessen.de/LUSD-Anleitungen/Schulformbezogene%20Informationen/Berufliche%20Schulen/BS_Schulformen_Berufe_Lernfelder.xlsx'
 
 export class BerufeLoader {
   private berufe: Map<string, Beruf> = new Map()
 
+  private async downloadFile(url: string, destPath: string): Promise<void> {
+    const response = await fetch(url)
+    if (!response.ok) {
+      throw new Error(`Download fehlgeschlagen: ${response.status} ${response.statusText}`)
+    }
+    const buffer = await response.arrayBuffer()
+    await fs.promises.mkdir(path.dirname(destPath), { recursive: true })
+    await fs.promises.writeFile(destPath, Buffer.from(buffer))
+  }
+
   async load(filePath: string): Promise<void> {
+    // Auto-download if file doesn't exist
+    if (!fs.existsSync(filePath)) {
+      console.log(`Datei nicht gefunden: ${filePath}`)
+      console.log('Lade BS_Schulformen_Berufe_Lernfelder.xlsx herunter...')
+      await this.downloadFile(DEFAULT_DATA_URL, filePath)
+      console.log('Download abgeschlossen.')
+    }
     const workbook = XLSX.readFile(filePath)
     const sheet = workbook.Sheets['Berufe mit Lernfeldern']
     if (!sheet) {
