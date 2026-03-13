@@ -185,3 +185,15 @@ describe('roundNote', () => {
 1. `src/types/index.ts` - Domain types
 2. `src/core/grades.ts` - Core calculation logic
 3. `src/tui/app.ts` - Application flow
+
+## Test Coverage
+
+The project has comprehensive unit tests using `bun:test`:
+
+| Module | Tests | File |
+|--------|-------|------|
+| Grade calculations | 23 | `src/core/grades.test.ts` |
+| Berufe loader | 16 | `src/import/berufe-loader.test.ts` |
+| LUSD parser | 13 | `src/import/lusd-parser.test.ts` |
+
+Run all tests: `bun test` (52 tests, ~1s)
