@@ -103,7 +103,8 @@ export async function klassenberechnung(berufeLoader: BerufeLoader) {
   const overrides: AnpassenOverrides = {
     noten: new Map(),
     halbjahre: new Map(),
-    stunden: new Map()
+    stunden: new Map(),
+    berufe: new Map()
   }
 
   // Recalculate with overrides applied
@@ -111,9 +112,10 @@ export async function klassenberechnung(berufeLoader: BerufeLoader) {
     const result: Berechnungsergebnis[] = []
     let skipped = 0
     for (const schueler of klassenSchueler) {
-      const berufData = berufeLoader.getBeruf(schueler.beruf)
-      if (!berufData) { skipped++; continue }
       const key = `${schueler.nachname}_${schueler.vorname}`
+      const berufName = overrides.berufe.get(key) ?? schueler.beruf
+      const berufData = berufeLoader.getBeruf(berufName)
+      if (!berufData) { skipped++; continue }
 
       // Apply halbjahre override
       const halbjahre = overrides.halbjahre.get(key) ?? schueler.halbjahre ?? ['10/1', '10/2', '11/1', '11/2', '12/1', '12/2', '13/1']
@@ -163,7 +165,8 @@ export async function klassenberechnung(berufeLoader: BerufeLoader) {
     console.log('─'.repeat(50))
     for (const erg of ergebnisse.slice(0, 20)) {
       const name = `${erg.schueler.nachname}, ${erg.schueler.vorname}`.substring(0, 28).padEnd(30)
-      const hasOverride = overrides.noten.has(`${erg.schueler.nachname}_${erg.schueler.vorname}`) ? '*' : ' '
+      const oKey = `${erg.schueler.nachname}_${erg.schueler.vorname}`
+      const hasOverride = (overrides.noten.has(oKey) || overrides.halbjahre.has(oKey) || overrides.stunden.has(oKey) || overrides.berufe.has(oKey)) ? '*' : ' '
       console.log(`${name} ${String(erg.bbuNoteGerundet).padStart(3)}   ${String(erg.gesamtnoteGerundet).padStart(3)} ${hasOverride}`)
     }
     if (ergebnisse.length > 20) console.log(`... und ${ergebnisse.length - 20} weitere`)

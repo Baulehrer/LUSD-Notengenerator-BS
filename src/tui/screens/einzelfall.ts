@@ -3,6 +3,7 @@ import type { BerufeLoader } from '../../import/berufe-loader'
 import type { Schueler, NoteEintrag } from '../../types'
 import { calculateSchuelerNoten } from '../../core/grades'
 import { generatePDF } from '../../export/pdf'
+import { selectBerufWithSearch } from '../beruf-search'
 
 const LERNFELDER = ['LF01', 'LF02', 'LF03', 'LF04', 'LF05', 'LF06', 'LF07', 'LF08', 'LF09', 'LF10', 'LF11', 'LF12', 'LF13', 'LF14', 'LF15', 'LF16', 'LF17', 'LF18'] as const
 const ALLGEMEINE_FAECHER = ['D', 'POWI', 'RKA', 'SPO', 'ENG'] as const
@@ -43,16 +44,10 @@ export async function einzelfallBerechnung(berufeLoader: BerufeLoader) {
 
   if (p.isCancel(stufeSemester)) return
 
-  const berufe = berufeLoader.getAllBerufe()
-  const beruf = await p.select({
-    message: 'Ausbildungsberuf',
-    options: berufe.map(b => ({ value: b, label: b })),
-    maxItems: 20
-  })
-  
-  if (p.isCancel(beruf)) return
-  
-  const berufData = berufeLoader.getBeruf(beruf as string)
+  const berufName = await selectBerufWithSearch(berufeLoader)
+  if (!berufName) return
+
+  let berufData = berufeLoader.getBeruf(berufName)
   if (!berufData) {
     p.log.error('Beruf nicht gefunden')
     return
@@ -117,7 +112,7 @@ export async function einzelfallBerechnung(berufeLoader: BerufeLoader) {
     allgFachNoten.set(fach, [{ note, lehrer: '' }])
   }
   
-  const schueler: Schueler = {
+  let schueler: Schueler = {
     nachname: schuelerName.split(',')[0]?.trim() || schuelerName,
     vorname: schuelerName.split(',')[1]?.trim() || '',
     klasse: klasse,
@@ -128,41 +123,104 @@ export async function einzelfallBerechnung(berufeLoader: BerufeLoader) {
       allgemeineFaecher: allgFachNoten
     }
   }
-  
-  const ergebnis = calculateSchuelerNoten(schueler, berufData, HALBJAHRE)
 
-  console.clear()
-  p.intro('📊 Berechnungsergebnis')
+  // Action loop: show result, allow editing, PDF export
+  while (true) {
+    const ergebnis = calculateSchuelerNoten(schueler, berufData, HALBJAHRE)
 
-  const bbuRaw = typeof ergebnis.bbuNote === 'number' ? ergebnis.bbuNote.toFixed(2) : '–'
-  const gesamtRaw = typeof ergebnis.gesamtnote === 'number' ? ergebnis.gesamtnote.toFixed(2) : '–'
+    console.clear()
+    p.intro('📊 Berechnungsergebnis')
 
-  p.note(
-    [
-      `Klasse:        ${ergebnis.schueler.klasse}`,
-      `Beruf:         ${ergebnis.schueler.beruf}`,
-      `${'─'.repeat(38)}`,
-      `BBU-Note:      ${bbuRaw}  →  gerundet: ${ergebnis.bbuNoteGerundet}`,
-      `Gesamtnote:    ${gesamtRaw}  →  gerundet: ${ergebnis.gesamtnoteGerundet}`,
-      `${'─'.repeat(38)}`,
-      `Stunden BBU:   ${ergebnis.stundenBBU}`,
-      `Stunden Allg.: ${ergebnis.stundenAllg}`,
-    ].join('\n'),
-    `${ergebnis.schueler.nachname}, ${ergebnis.schueler.vorname}`
-  )
-  
-  const doExport = await p.confirm({
-    message: 'PDF exportieren?',
-    initialValue: true
-  })
-  
-  if (p.isCancel(doExport)) return
-  
-  if (doExport) {
-    const outputPath = `output/${schueler.nachname}_${schueler.vorname}_noten.pdf`
-    await generatePDF([ergebnis], outputPath)
-    p.log.success(`PDF gespeichert: ${outputPath}`)
+    const bbuRaw = typeof ergebnis.bbuNote === 'number' ? ergebnis.bbuNote.toFixed(2) : '–'
+    const gesamtRaw = typeof ergebnis.gesamtnote === 'number' ? ergebnis.gesamtnote.toFixed(2) : '–'
+
+    p.note(
+      [
+        `Klasse:        ${ergebnis.schueler.klasse}`,
+        `Beruf:         ${ergebnis.schueler.beruf}`,
+        `${'─'.repeat(38)}`,
+        `BBU-Note:      ${bbuRaw}  →  gerundet: ${ergebnis.bbuNoteGerundet}`,
+        `Gesamtnote:    ${gesamtRaw}  →  gerundet: ${ergebnis.gesamtnoteGerundet}`,
+        `${'─'.repeat(38)}`,
+        `Stunden BBU:   ${ergebnis.stundenBBU}`,
+        `Stunden Allg.: ${ergebnis.stundenAllg}`,
+      ].join('\n'),
+      `${ergebnis.schueler.nachname}, ${ergebnis.schueler.vorname}`
+    )
+
+    const action = await p.select({
+      message: 'Was möchtest du tun?',
+      options: [
+        { value: 'pdf', label: '📄 PDF exportieren' },
+        { value: 'note', label: '📝 Note ändern' },
+        { value: 'beruf', label: '🎓 Beruf ändern' },
+        { value: 'back', label: '← Zurück' }
+      ]
+    })
+
+    if (p.isCancel(action) || action === 'back') return
+
+    if (action === 'pdf') {
+      const outputPath = `output/${schueler.nachname}_${schueler.vorname}_noten.pdf`
+      try {
+        await generatePDF([ergebnis], outputPath)
+        p.log.success(`PDF gespeichert: ${outputPath}`)
+      } catch (error) {
+        p.log.error(`Fehler beim PDF-Export: ${error}`)
+      }
+      continue
+    }
+
+    if (action === 'beruf') {
+      const neuerBeruf = await selectBerufWithSearch(berufeLoader, schueler.beruf)
+      if (neuerBeruf) {
+        const neuesBerufData = berufeLoader.getBeruf(neuerBeruf)
+        if (neuesBerufData) {
+          berufData = neuesBerufData
+          schueler = { ...schueler, beruf: neuesBerufData.name }
+        }
+      }
+      continue
+    }
+
+    if (action === 'note') {
+      // Select Fach/LF
+      const NOTE_OPTIONS_EDIT = [
+        { value: null, label: '∅  Nicht unterrichtet' },
+        { value: 1, label: '1 – sehr gut' },
+        { value: 2, label: '2 – gut' },
+        { value: 3, label: '3 – befriedigend' },
+        { value: 4, label: '4 – ausreichend' },
+        { value: 5, label: '5 – mangelhaft' },
+        { value: 6, label: '6 – ungenügend' }
+      ]
+      const FACH_NAMES: Record<string, string> = { D: 'Deutsch', POWI: 'Politik & Wirtschaft', RKA: 'Religion', SPO: 'Sport', ENG: 'Englisch' }
+      const fachOptions: { value: string; label: string; hint?: string }[] = []
+      for (const [lf, eintraege] of schueler.noten.lernfelder) {
+        const note = [...eintraege].reverse().find(n => n.note !== null)?.note ?? null
+        fachOptions.push({ value: lf, label: lf, hint: note !== null ? String(note) : '–' })
+      }
+      for (const [fach, eintraege] of schueler.noten.allgemeineFaecher) {
+        const note = [...eintraege].reverse().find(n => n.note !== null)?.note ?? null
+        fachOptions.push({ value: fach, label: FACH_NAMES[fach] ?? fach, hint: note !== null ? String(note) : '–' })
+      }
+      fachOptions.push({ value: '__back__', label: '← Zurück' })
+
+      const fach = await p.select({ message: 'Welches Fach / Lernfeld?', options: fachOptions })
+      if (p.isCancel(fach) || fach === '__back__') continue
+
+      const newNote = await p.select({ message: `Neue Note für ${fach}`, options: NOTE_OPTIONS_EDIT })
+      if (p.isCancel(newNote)) continue
+
+      const note = newNote as number | null
+      const lernfelder = new Map(schueler.noten.lernfelder)
+      const allgemeineFaecher = new Map(schueler.noten.allgemeineFaecher)
+      if (lernfelder.has(fach as string)) {
+        lernfelder.set(fach as string, [{ note, lehrer: '' }])
+      } else {
+        allgemeineFaecher.set(fach as string, [{ note, lehrer: '' }])
+      }
+      schueler = { ...schueler, noten: { lernfelder, allgemeineFaecher } }
+    }
   }
-  
-  await p.confirm({ message: 'Drücke Enter um fortzufahren' })
 }
