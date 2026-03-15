@@ -1,7 +1,6 @@
 import { test, expect, describe, beforeAll } from 'bun:test'
 import { BerufeLoader } from './berufe-loader'
 import * as XLSX from 'xlsx'
-import * as path from 'path'
 import * as fs from 'fs'
 
 const DATA_FILE = 'data/BS_Schulformen_Berufe_Lernfelder.xlsx'

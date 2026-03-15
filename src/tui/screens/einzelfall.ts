@@ -27,11 +27,26 @@ export async function einzelfallBerechnung(berufeLoader: BerufeLoader) {
   })
   
   if (p.isCancel(klasse)) return
-  
+
+  const stufeSemester = await p.select({
+    message: 'Stufe / Semester',
+    options: [
+      { value: '10/1', label: '10/1' },
+      { value: '10/2', label: '10/2' },
+      { value: '11/1', label: '11/1' },
+      { value: '11/2', label: '11/2' },
+      { value: '12/1', label: '12/1' },
+      { value: '12/2', label: '12/2' },
+      { value: '13/1', label: '13/1' },
+    ]
+  })
+
+  if (p.isCancel(stufeSemester)) return
+
   const berufe = berufeLoader.getAllBerufe()
   const beruf = await p.select({
     message: 'Ausbildungsberuf',
-    options: berufe.slice(0, 50).map(b => ({ value: b, label: b })),
+    options: berufe.map(b => ({ value: b, label: b })),
     maxItems: 20
   })
   
@@ -107,7 +122,7 @@ export async function einzelfallBerechnung(berufeLoader: BerufeLoader) {
     vorname: schuelerName.split(',')[1]?.trim() || '',
     klasse: klasse,
     beruf: berufData.name,
-    stufeSemester: '11/2',
+    stufeSemester: stufeSemester as string,
     noten: {
       lernfelder: lernfeldNoten,
       allgemeineFaecher: allgFachNoten
@@ -115,27 +130,26 @@ export async function einzelfallBerechnung(berufeLoader: BerufeLoader) {
   }
   
   const ergebnis = calculateSchuelerNoten(schueler, berufData, HALBJAHRE)
-  
+
   console.clear()
   p.intro('📊 Berechnungsergebnis')
-  
-  const table = [
-    ['Schüler:', `${ergebnis.schueler.nachname}, ${ergebnis.schueler.vorname}`],
-    ['Klasse:', ergebnis.schueler.klasse],
-    ['Beruf:', ergebnis.schueler.beruf],
-    ['─'.repeat(30), '─'.repeat(30)],
-    ['BBU-Note:', `${ergebnis.bbuNote} (gerundet: ${ergebnis.bbuNoteGerundet})`],
-    ['Gesamtnote:', `${ergebnis.gesamtnote} (gerundet: ${ergebnis.gesamtnoteGerundet})`],
-    ['─'.repeat(30), '─'.repeat(30)],
-    ['Stunden BBU:', String(ergebnis.stundenBBU)],
-    ['Stunden Allg.:', String(ergebnis.stundenAllg)],
-  ]
-  
-  for (const row of table) {
-    const label = row[0] ?? ''
-    const value = row[1] ?? ''
-    console.log(`${label.padEnd(20)} ${value}`)
-  }
+
+  const bbuRaw = typeof ergebnis.bbuNote === 'number' ? ergebnis.bbuNote.toFixed(2) : '–'
+  const gesamtRaw = typeof ergebnis.gesamtnote === 'number' ? ergebnis.gesamtnote.toFixed(2) : '–'
+
+  p.note(
+    [
+      `Klasse:        ${ergebnis.schueler.klasse}`,
+      `Beruf:         ${ergebnis.schueler.beruf}`,
+      `${'─'.repeat(38)}`,
+      `BBU-Note:      ${bbuRaw}  →  gerundet: ${ergebnis.bbuNoteGerundet}`,
+      `Gesamtnote:    ${gesamtRaw}  →  gerundet: ${ergebnis.gesamtnoteGerundet}`,
+      `${'─'.repeat(38)}`,
+      `Stunden BBU:   ${ergebnis.stundenBBU}`,
+      `Stunden Allg.: ${ergebnis.stundenAllg}`,
+    ].join('\n'),
+    `${ergebnis.schueler.nachname}, ${ergebnis.schueler.vorname}`
+  )
   
   const doExport = await p.confirm({
     message: 'PDF exportieren?',

@@ -31,6 +31,7 @@ export interface Schueler {
   klasse: string
   beruf: string
   stufeSemester: string
+  halbjahre?: string[]   // NEU
   noten: SchuelerNoten
 }
 
