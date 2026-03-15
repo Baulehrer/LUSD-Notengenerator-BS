@@ -1,11 +1,13 @@
 import * as p from '@clack/prompts'
 import type { Berechnungsergebnis, Schueler } from '../../types'
 import type { BerufeLoader } from '../../import/berufe-loader'
+import { selectBerufWithSearch } from '../beruf-search'
 
 export interface AnpassenOverrides {
   noten: Map<string, Map<string, number | null>>
   halbjahre: Map<string, string[]>
   stunden: Map<string, Map<string, number>>
+  berufe: Map<string, string>
 }
 
 const NOTE_OPTIONS = [
@@ -70,6 +72,7 @@ async function editSchueler(
         { value: 'noten', label: '📝 Einzelne Note ändern', hint: 'LF oder allgemeines Fach' },
         { value: 'halbjahre', label: '📅 Halbjahre anpassen', hint: 'Welche Semester zählen' },
         { value: 'stunden', label: '⚖️  LF-Stunden überschreiben', hint: 'Gewichtung einzelner LF ändern' },
+        { value: 'beruf', label: '🎓 Beruf ändern', hint: 'Abweichenden Beruf zuweisen' },
         { value: 'reset', label: '↺  Anpassungen zurücksetzen' },
         { value: '__back__', label: '← Zurück' }
       ]
@@ -83,14 +86,30 @@ async function editSchueler(
       await editHalbjahre(erg, overrides, originalSchueler)
     } else if (action === 'stunden') {
       await editStunden(erg, berufeLoader, overrides)
+    } else if (action === 'beruf') {
+      await editBeruf(erg, berufeLoader, overrides)
     } else if (action === 'reset') {
       overrides.noten.delete(key)
       overrides.halbjahre.delete(key)
       overrides.stunden.delete(key)
+      overrides.berufe.delete(key)
       p.log.success(`Anpassungen für ${name} zurückgesetzt`)
       return
     }
   }
+}
+
+async function editBeruf(
+  erg: Berechnungsergebnis,
+  berufeLoader: BerufeLoader,
+  overrides: AnpassenOverrides
+): Promise<void> {
+  const key = studentKey(erg.schueler)
+  const currentBeruf = overrides.berufe.get(key) ?? erg.schueler.beruf
+  const neuerBeruf = await selectBerufWithSearch(berufeLoader, currentBeruf)
+  if (!neuerBeruf) return
+  overrides.berufe.set(key, neuerBeruf)
+  p.log.success(`Beruf geändert: ${neuerBeruf}`)
 }
 
 async function editNoten(erg: Berechnungsergebnis, overrides: AnpassenOverrides): Promise<void> {
