@@ -123,16 +123,16 @@ describe('calculateBBUNote', () => {
     expect(result.stunden).toBe(40)
   })
 
-  test('handles multiple grades per Lernfeld', () => {
+  test('handles multiple grades per Lernfeld — uses latest note only', () => {
     const beruf = createMockBeruf(new Map([['LF01', 40]]))
     const schueler = createMockSchueler(new Map([
       ['LF01', [{ note: 2, lehrer: '' }, { note: 4, lehrer: '' }]]
     ]))
 
-    // (2 * 40 + 4 * 40) / 80 = 240 / 80 = 3
+    // Only the latest (last) non-null note is used: 4 * 40 / 40 = 4
     const result = calculateBBUNote(schueler, beruf)
-    expect(result.note).toBe(3)
-    expect(result.stunden).toBe(80)
+    expect(result.note).toBe(4)
+    expect(result.stunden).toBe(40)
   })
 })
 

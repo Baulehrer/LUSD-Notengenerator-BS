@@ -2,21 +2,26 @@ import * as p from '@clack/prompts'
 import { BerufeLoader } from '../import/berufe-loader'
 import { einzelfallBerechnung } from './screens/einzelfall'
 import { klassenberechnung } from './screens/klassenberechnung'
+import { showIntro } from './intro'
 
 const DATA_FILE = 'data/BS_Schulformen_Berufe_Lernfelder.xlsx'
 
 export async function main() {
-  console.clear()
-  
+  await showIntro()
+
   p.intro('🎓 LUSD Notengenerator')
-  
+
   const berufeLoader = new BerufeLoader()
-  
+
+  const spinner = p.spinner()
+  spinner.start('Berufe-Datei wird geladen…')
+
   try {
     await berufeLoader.load(DATA_FILE)
-    p.log.success(`Berufe geladen: ${berufeLoader.getAllBerufe().length}`)
+    spinner.stop(`Berufe geladen: ${berufeLoader.getAllBerufe().length}`)
   } catch (error) {
-    p.log.error(`Fehler beim Laden der Berufe-Datei: ${error}`)
+    spinner.stop('Fehler beim Laden der Berufe-Datei')
+    p.log.error(`${error}`)
     p.log.info('Bitte stelle sicher, dass die Datei "data/BS_Schulformen_Berufe_Lernfelder.xlsx" existiert.')
     process.exit(1)
   }

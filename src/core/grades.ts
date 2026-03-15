@@ -40,11 +40,10 @@ export function calculateBBUNote(schueler: Schueler, beruf: Beruf): { note: numb
     if (stunden === 0) continue
 
     const notenListe = schueler.noten.lernfelder.get(lfId) || []
-    for (const notenEintrag of notenListe) {
-      if (notenEintrag.note !== null && notenEintrag.note > 0) {
-        totalGewichtung += notenEintrag.note * stunden
-        totalStunden += stunden
-      }
+    const latest = [...notenListe].reverse().find(n => n.note !== null && n.note > 0)
+    if (latest) {
+      totalGewichtung += latest.note! * stunden
+      totalStunden += stunden
     }
   }
 

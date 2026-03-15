@@ -35,6 +35,9 @@ bun test -t "calculateBBUNote"
 
 # Type check
 bunx tsc --noEmit
+
+# Lint and format (if biome.json exists)
+bunx @biomejs/biome check --write .
 ```
 
 ## Project Structure
@@ -66,6 +69,8 @@ bunx tsc --noEmit
 // Namespace imports for libraries with many exports
 import * as p from '@clack/prompts'
 import * as XLSX from 'xlsx'
+import * as fs from 'node:fs'
+import * as path from 'node:path'
 
 // Type-only imports - always use `type` keyword
 import type { Schueler, Berechnungsergebnis } from '../types'
@@ -90,6 +95,7 @@ import { calculateSchuelerNoten } from '../core/grades'
 - Use union types for literals: `1 | 2` for halbjahr
 - Prefer `null` over `undefined` for optional values in domain types
 - Use `type` for imports of types: `import type { ... }`
+- Use `interface` for object types, `type` for unions/aliases
 
 ```typescript
 // Good
@@ -100,6 +106,12 @@ export interface NoteEintrag {
 
 export const LERNFELDER = ['LF01', 'LF02'] as const
 export type LernfeldId = typeof LERNFELDER[number]
+
+// Prefer Map for keyed collections
+export interface Beruf {
+  name: string
+  lernfelder: Map<string, number>
+}
 ```
 
 ### Formatting
@@ -124,6 +136,20 @@ if (!sheet) {
 // Good - return undefined for not found
 getBeruf(name: string): Beruf | undefined {
   // ...
+}
+```
+
+### Private Fields
+
+- Use camelCase with `private` modifier (no underscore prefix)
+
+```typescript
+export class BerufeLoader {
+  private berufe: Map<string, Beruf> = new Map()
+
+  private async downloadFile(url: string, destPath: string): Promise<void> {
+    // ...
+  }
 }
 ```
 
@@ -197,3 +223,9 @@ The project has comprehensive unit tests using `bun:test`:
 | LUSD parser | 13 | `src/import/lusd-parser.test.ts` |
 
 Run all tests: `bun test` (52 tests, ~1s)
+
+## Security
+
+- Never introduce OWASP Top 10 vulnerabilities
+- Validate all user inputs and external data
+- No secrets in code or commits

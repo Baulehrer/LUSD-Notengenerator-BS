@@ -86,49 +86,34 @@ export function parseHistorieFile(filePath: string): Map<string, { noten: Schuel
       }
     }
     
-    const schuelerName = extractSchuelerName(data)
-    if (schuelerName) {
-      result.set(schuelerName, {
-        noten: {
-          lernfelder: lernfeldNoten,
-          allgemeineFaecher: allgFachNoten
-        },
-        klasse,
-        halbjahre
-      })
-    }
+    result.set(sheetName, {
+      noten: {
+        lernfelder: lernfeldNoten,
+        allgemeineFaecher: allgFachNoten
+      },
+      klasse,
+      halbjahre
+    })
   }
   
   return result
 }
 
 function extractHalbjahre(data: Record<string, string>[]): string[] {
-  const halbjahre: string[] = []
-  
   for (const row of data) {
-    const hjRaw = row['__EMPTY']
-    if (hjRaw && typeof hjRaw === 'string') {
-      const hj = hjRaw.trim()
-      if (hj === 'Hj' || hj === '') continue
-      
-      if (hj.match(/^\d{4}\/[12]$/)) {
-        for (const key of Object.keys(row)) {
-          if (key.startsWith('__EMPTY_')) {
-            const val = row[key]
-            if (val && typeof val === 'string') {
-              const match = val.trim().match(/^\s*(\d+\/[12])\s*$/)
-              if (match && match[1]) {
-                halbjahre.push(match[1])
-              }
-            }
-          }
-        }
-        break
-      }
-    }
+    if (row['__EMPTY']?.trim() !== 'St/Sem') continue
+    return Object.keys(row)
+      .filter(k => k.startsWith('__EMPTY_'))
+      .sort((a, b) => {
+        const n = (s: string) => parseInt(s.replace('__EMPTY_', ''), 10)
+        return n(a) - n(b)
+      })
+      .flatMap(k => {
+        const v = row[k]?.trim()
+        return v && /^\d+\/\d+$/.test(v) ? [v] : []
+      })
   }
-  
-  return halbjahre
+  return []
 }
 
 function extractKlasse(data: Record<string, string>[]): string {
@@ -146,16 +131,6 @@ function extractKlasse(data: Record<string, string>[]): string {
     }
   }
   return ''
-}
-
-function extractSchuelerName(data: Record<string, string>[]): string | null {
-  for (const row of data) {
-    const val = row['__EMPTY']
-    if (val && typeof val === 'string' && val.includes('Schule')) {
-      continue
-    }
-  }
-  return `Schueler_${data.length}`
 }
 
 function extractNotenFromRow(row: Record<string, string>): NoteEintrag[] {
@@ -188,22 +163,20 @@ export function combineZeugnisAndHistorie(
   zeugnisData: Map<string, { nachname: string; vorname: string; beruf: string; stufeSemester: string }>,
   historieData: Map<string, { noten: SchuelerNoten; klasse: string; halbjahre: string[] }>
 ): Schueler[] {
-  const schuelerListe: Schueler[] = []
-  
-  for (const [key, zeugnis] of zeugnisData) {
-    const historie = historieData.get(key)
-    
-    if (historie) {
-      schuelerListe.push({
-        nachname: zeugnis.nachname,
-        vorname: zeugnis.vorname,
-        klasse: historie.klasse,
-        beruf: zeugnis.beruf,
-        stufeSemester: zeugnis.stufeSemester,
-        noten: historie.noten
-      })
-    }
-  }
-  
-  return schuelerListe
+  const zList = [...zeugnisData.values()]
+  const hList = [...historieData.values()]
+
+  return zList.flatMap((zeugnis, i) => {
+    const historie = hList[i]
+    if (!historie) return []
+    return [{
+      nachname: zeugnis.nachname,
+      vorname: zeugnis.vorname,
+      klasse: historie.klasse,
+      beruf: zeugnis.beruf,
+      stufeSemester: zeugnis.stufeSemester,
+      halbjahre: historie.halbjahre,
+      noten: historie.noten
+    } satisfies Schueler]
+  })
 }
