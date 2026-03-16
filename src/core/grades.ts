@@ -55,14 +55,19 @@ export function calculateBBUNote(schueler: Schueler, beruf: Beruf): { note: numb
   }
 }
 
-export function calculateAllgemeinesFach(notenListe: NoteEintrag[], halbjahre: string[]): { note: number; gewichtung: number; stunden: number } {
+export function calculateAllgemeinesFach(
+  notenListe: NoteEintrag[],
+  halbjahre: string[],
+  halbjahrStunden?: Record<string, number>
+): { note: number; gewichtung: number; stunden: number } {
+  const stundenMap = halbjahrStunden ?? HALBJAHRE_STUNDEN
   let totalGewichtung = 0
   let totalStunden = 0
 
   for (let i = 0; i < notenListe.length && i < halbjahre.length; i++) {
     const halbjahr = halbjahre[i]
     if (!halbjahr) continue
-    const stunden = HALBJAHRE_STUNDEN[halbjahr] ?? 0
+    const stunden = stundenMap[halbjahr] ?? 0
     const notenEintrag = notenListe[i]
 
     if (stunden > 0 && notenEintrag?.note !== null && notenEintrag?.note !== undefined && notenEintrag.note > 0) {
@@ -91,13 +96,18 @@ export function calculateGesamtnote(
   return totalStunden > 0 ? roundNote(totalGewichtung / totalStunden) : 0
 }
 
-export function calculateSchuelerNoten(schueler: Schueler, beruf: Beruf, halbjahre: string[]): Berechnungsergebnis {
+export function calculateSchuelerNoten(
+  schueler: Schueler,
+  beruf: Beruf,
+  halbjahre: string[],
+  halbjahrStunden?: Record<string, number>
+): Berechnungsergebnis {
   const bbuResult = calculateBBUNote(schueler, beruf)
-  
+
   const allgFaecherResults = new Map<string, { note: number; gewichtung: number; stunden: number }>()
   for (const fach of ALLGEMEINE_FAECHER) {
     const notenListe = schueler.noten.allgemeineFaecher.get(fach) || []
-    allgFaecherResults.set(fach, calculateAllgemeinesFach(notenListe, halbjahre))
+    allgFaecherResults.set(fach, calculateAllgemeinesFach(notenListe, halbjahre, halbjahrStunden))
   }
 
   const gesamtnote = calculateGesamtnote(bbuResult, allgFaecherResults)
