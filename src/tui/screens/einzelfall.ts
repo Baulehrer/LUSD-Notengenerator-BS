@@ -163,7 +163,7 @@ export async function einzelfallBerechnung(berufeLoader: BerufeLoader) {
     if (action === 'pdf') {
       const outputPath = `output/${schueler.nachname}_${schueler.vorname}_noten.pdf`
       try {
-        await generatePDF([ergebnis], outputPath)
+        await generatePDF([ergebnis], outputPath, { beruf: berufData, halbjahre: HALBJAHRE })
         p.log.success(`PDF gespeichert: ${outputPath}`)
       } catch (error) {
         p.log.error(`Fehler beim PDF-Export: ${error}`)
