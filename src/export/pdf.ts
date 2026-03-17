@@ -65,6 +65,162 @@ function hline(doc: PDFKit.PDFDocument, y: number, x1 = 40, x2 = 555): void {
   doc.moveTo(x1, y).lineTo(x2, y).strokeColor('#888888').lineWidth(0.5).stroke()
 }
 
+// ── BBU horizontal: LFs als Spalten, 3 Zeilen (Name/Stunden/Note) ──
+function renderBBUHorizontal(
+  doc: PDFKit.PDFDocument,
+  y: number,
+  schueler: import('../types').Schueler,
+  berufData: Beruf | undefined
+): { y: number; gewichtung: number; stunden: number } {
+  // Collect active LF rows
+  type LFRow = { lf: string; stunden: number; note: number }
+  const rows: LFRow[] = []
+  for (const [lf, eintraege] of schueler.noten.lernfelder) {
+    const stunden = berufData?.lernfelder.get(lf) ?? 0
+    if (stunden === 0) continue
+    const latest = [...eintraege].reverse().find(n => n.note !== null && n.note! > 0)
+    if (!latest) continue
+    rows.push({ lf, stunden, note: latest.note! })
+  }
+
+  if (rows.length === 0) return { y, gewichtung: 0, stunden: 0 }
+
+  // Dynamic column width: fit all into one row if possible
+  const maxX = 555
+  const startX = 50
+  const availW = maxX - startX
+  const colW = Math.max(30, Math.floor(availW / Math.min(rows.length, 12)))
+  const rowsPerGroup = Math.floor(availW / colW)
+
+  // Split into groups
+  for (let g = 0; g * rowsPerGroup < rows.length; g++) {
+    const group = rows.slice(g * rowsPerGroup, (g + 1) * rowsPerGroup)
+    if (y > 700) { doc.addPage(); y = 40 }
+
+    // Row 1: LF names (header background)
+    doc.rect(startX, y, group.length * colW, 13).fillColor('#eeeeee').fill()
+    doc.fillColor('black').fontSize(7).font('Helvetica-Bold')
+    for (let i = 0; i < group.length; i++) {
+      doc.text(group[i]!.lf, startX + i * colW + 2, y + 2, { width: colW - 4, lineBreak: false })
+    }
+    y += 13
+
+    // Row 2: Stunden
+    doc.fontSize(7).font('Helvetica').fillColor('#444444')
+    for (let i = 0; i < group.length; i++) {
+      doc.text(`${group[i]!.stunden}h`, startX + i * colW + 2, y + 2, { width: colW - 4, lineBreak: false })
+    }
+    y += 12
+
+    // Row 3: Noten
+    doc.fontSize(9).font('Helvetica-Bold').fillColor('black')
+    for (let i = 0; i < group.length; i++) {
+      doc.text(String(group[i]!.note), startX + i * colW + 2, y + 2, { width: colW - 4, lineBreak: false })
+    }
+    y += 14
+
+    hline(doc, y, startX, startX + group.length * colW)
+    y += 6
+  }
+
+  const totalGewichtung = rows.reduce((s, r) => s + r.note * r.stunden, 0)
+  const totalStunden = rows.reduce((s, r) => s + r.stunden, 0)
+  return { y, gewichtung: totalGewichtung, stunden: totalStunden }
+}
+
+// ── Allg. Fächer horizontal: Fächer als Zeilen, HJ als Spalten ──
+function renderAllgFaecherHorizontal(
+  doc: PDFKit.PDFDocument,
+  y: number,
+  schueler: import('../types').Schueler,
+  halbjahre: string[],
+  stundenMap: Record<string, number>
+): number {
+  if (halbjahre.length === 0) return y
+
+  const startX = 50
+  const fachColW = 100
+  const hjColW = 42
+  const endnoteColW = 65
+  const vorschlagColW = 55
+
+  // Header row
+  doc.rect(startX, y, fachColW + halbjahre.length * hjColW + endnoteColW + vorschlagColW, 13)
+    .fillColor('#eeeeee').fill()
+  doc.fillColor('black').fontSize(7).font('Helvetica-Bold')
+
+  let x = startX
+  doc.text('Fach', x + 2, y + 2, { width: fachColW - 4, lineBreak: false })
+  x += fachColW
+  for (const hj of halbjahre) {
+    doc.text(hj, x + 2, y + 2, { width: hjColW - 4, lineBreak: false })
+    x += hjColW
+  }
+  doc.text('Endnote', x + 2, y + 2, { width: endnoteColW - 4, lineBreak: false })
+  x += endnoteColW
+  doc.text('Vorschlag', x + 2, y + 2, { width: vorschlagColW - 4, lineBreak: false })
+  y += 13
+
+  // One row per Fach
+  for (const [fach, eintraege] of schueler.noten.allgemeineFaecher) {
+    // Check if this Fach has any notes
+    const hasNotes = eintraege.some((e, i) => {
+      const hj = halbjahre[i]
+      if (!hj) return false
+      const stunden = stundenMap[hj] ?? 0
+      return e.note !== null && e.note !== undefined && e.note > 0 && stunden > 0
+    })
+    if (!hasNotes) continue
+
+    if (y > 720) { doc.addPage(); y = 40 }
+
+    let fachGewichtung = 0
+    let fachStunden = 0
+
+    doc.fontSize(8).font('Helvetica')
+    x = startX
+    doc.text(FACH_NAMEN[fach] ?? fach, x + 2, y + 2, { width: fachColW - 4, lineBreak: false })
+    x += fachColW
+
+    for (let i = 0; i < halbjahre.length; i++) {
+      const hj = halbjahre[i]!
+      const eintrag = eintraege[i]
+      const stunden = stundenMap[hj] ?? 0
+      const note = eintrag?.note
+
+      if (note !== null && note !== undefined && note > 0 && stunden > 0) {
+        doc.font('Helvetica-Bold')
+        doc.text(String(note), x + 2, y + 2, { width: hjColW - 4, lineBreak: false })
+        doc.font('Helvetica')
+        fachGewichtung += note * stunden
+        fachStunden += stunden
+      } else {
+        doc.fillColor('#aaaaaa')
+        doc.text('–', x + 2, y + 2, { width: hjColW - 4, lineBreak: false })
+        doc.fillColor('black')
+      }
+      x += hjColW
+    }
+
+    // Endnote + Vorschlag
+    if (fachStunden > 0) {
+      const endnote = fachGewichtung / fachStunden
+      const vorschlag = Math.round(endnote)
+      doc.font('Helvetica-Bold').fillColor('black')
+      doc.text(`${endnote.toFixed(2)}`, x + 2, y + 2, { width: endnoteColW - 4, lineBreak: false })
+      x += endnoteColW
+      doc.text(String(vorschlag), x + 2, y + 2, { width: vorschlagColW - 4, lineBreak: false })
+      doc.font('Helvetica')
+    }
+
+    y += 14
+    hline(doc, y, startX, startX + fachColW + halbjahre.length * hjColW + endnoteColW + vorschlagColW)
+    y += 3
+  }
+
+  return y
+}
+
 function renderEinzelfall(
   doc: PDFKit.PDFDocument,
   ergebnis: Berechnungsergebnis,
@@ -99,88 +255,23 @@ function renderEinzelfall(
   doc.text(`Ausscheide-Semester: ${schueler.stufeSemester}`, 320, y)
   y += 20
 
-  // ── BBU-Tabelle ────────────────────────────────────────────────
+  // ── BBU-Tabelle (horizontal) ───────────────────────────────────
   y = renderSectionHeader(doc, y, 'Berufsbezogener Unterricht (BBU)')
 
-  const colsBBU = { lf: 80, stunden: 80, note: 80 }
-  y = renderTableHeader(doc, y, ['LF', 'Stunden', 'Note'], colsBBU)
+  const bbuResult = renderBBUHorizontal(doc, y, schueler, berufData)
+  y = bbuResult.y
 
-  let bbuGewichtungSum = 0
-  let bbuStundenSum = 0
-
-  for (const [lf, eintraege] of schueler.noten.lernfelder) {
-    const stunden = berufData?.lernfelder.get(lf) ?? 0
-    if (stunden === 0) continue
-    const latest = [...eintraege].reverse().find(n => n.note !== null && n.note! > 0)
-    if (!latest) continue
-    if (y > 720) { doc.addPage(); y = 40 }
-    bbuGewichtungSum += (latest.note ?? 0) * stunden
-    bbuStundenSum += stunden
-    const cols = [
-      { text: lf, width: colsBBU.lf },
-      { text: `${stunden} h`, width: colsBBU.stunden },
-      { text: String(latest.note ?? '–'), width: colsBBU.note }
-    ]
-    y = renderTableRow(doc, y, cols)
-  }
-
-  hline(doc, y)
-  y += 4
-  const bbuRaw = bbuStundenSum > 0 ? bbuGewichtungSum / bbuStundenSum : 0
+  const bbuRaw = bbuResult.stunden > 0 ? bbuResult.gewichtung / bbuResult.stunden : 0
   const bbuGerundet = Math.round(bbuRaw)
-  doc.fontSize(9).font('Helvetica-Oblique')
-    .text(`BBU-Note: ${bbuRaw.toFixed(2)} → gerundet: ${bbuGerundet}`, 50, y)
+  doc.fontSize(9).font('Helvetica-Oblique').fillColor('#333333')
+    .text(`BBU-Note: ${bbuRaw.toFixed(2)} -> gerundet: ${bbuGerundet}`, 50, y)
+  doc.fillColor('black')
   y += 18
 
-  // ── Allgemeine Fächer ──────────────────────────────────────────
+  // ── Allgemeine Fächer (horizontal) ────────────────────────────
   y = renderSectionHeader(doc, y, 'Allgemeinbildende Fächer')
-
-  const colsAllg = { fach: 140, hj: 55, stunden: 55, note: 55 }
-  y = renderTableHeader(doc, y, ['Fach', 'Halbjahr', 'Stunden', 'Note'], colsAllg)
-
-  for (const [fach, eintraege] of schueler.noten.allgemeineFaecher) {
-    let fachGewichtung = 0
-    let fachStunden = 0
-    let hasRows = false
-
-    for (let i = 0; i < eintraege.length; i++) {
-      const eintrag = eintraege[i]!
-      if (eintrag.note === null || eintrag.note === 0) continue
-      const hj = halbjahre[i] ?? `HJ${i + 1}`
-      const stunden = stundenMap[hj] ?? 0
-      if (stunden === 0) continue
-      if (y > 720) { doc.addPage(); y = 40 }
-      fachGewichtung += eintrag.note * stunden
-      fachStunden += stunden
-      hasRows = true
-      const cols = [
-        { text: FACH_NAMEN[fach] ?? fach, width: colsAllg.fach },
-        { text: hj, width: colsAllg.hj },
-        { text: `${stunden} h`, width: colsAllg.stunden },
-        { text: String(eintrag.note), width: colsAllg.note }
-      ]
-      y = renderTableRow(doc, y, cols)
-    }
-
-    if (hasRows) {
-      const endnote = fachStunden > 0 ? fachGewichtung / fachStunden : 0
-      const vorschlag = Math.round(endnote)
-      if (y > 720) { doc.addPage(); y = 40 }
-      doc.fontSize(8).font('Helvetica-Bold')
-      let x = 50
-      doc.text(`Endnote ${FACH_NAMEN[fach] ?? fach}`, x, y, { width: colsAllg.fach })
-      x += colsAllg.fach
-      doc.text('', x, y, { width: colsAllg.hj })
-      x += colsAllg.hj
-      doc.text('', x, y, { width: colsAllg.stunden })
-      x += colsAllg.stunden
-      doc.text(`${endnote.toFixed(2)}  →  ${vorschlag}`, x, y, { width: colsAllg.note + 60 })
-      y += 14
-    }
-  }
-
-  hline(doc, y)
-  y += 12
+  y = renderAllgFaecherHorizontal(doc, y, schueler, halbjahre, stundenMap)
+  y += 10
 
   // ── Ergebnis ───────────────────────────────────────────────────
   y = renderSectionHeader(doc, y, 'Ergebnis')
@@ -191,7 +282,7 @@ function renderEinzelfall(
 
   doc.fontSize(10).font('Helvetica')
   doc.text(`BBU-Note:    ${ergebnis.bbuNoteGerundet}`, 50, y)
-  doc.text('(ganzzahlig, kaufmännisch gerundet)', 200, y, { color: '#555555' } as any)
+  doc.text('(ganzzahlig, kaufmaennisch gerundet)', 200, y, { color: '#555555' } as any)
   y += 16
   doc.text(`Gesamtnote:  ${gesamtnoteFloor2.toFixed(2)}`, 50, y)
   doc.text('(2 Nachkommastellen, nur abgerundet)', 200, y, { color: '#555555' } as any)
@@ -202,12 +293,11 @@ function renderEinzelfall(
   y += 24
 
   // ── Klassenlehrer ───────────────────────────────────────────────
-  // Push to bottom of page if space allows
   if (y < 700) y = 700
 
   const datumStr = new Date().toLocaleDateString('de-DE')
   doc.fontSize(10).font('Helvetica')
-  doc.text('Für die Richtigkeit:', 50, y)
+  doc.text('Fuer die Richtigkeit:', 50, y)
   y += 20
   doc.text(`Datum: ${datumStr}`, 50, y)
   y += 30
@@ -221,30 +311,6 @@ function renderSectionHeader(doc: PDFKit.PDFDocument, y: number, title: string):
   doc.fillColor('black').fontSize(9).font('Helvetica-Bold')
     .text(`  ${title}`, 42, y + 3, { width: 511 })
   return y + 20
-}
-
-function renderTableHeader(doc: PDFKit.PDFDocument, y: number, headers: string[], _cols: object): number {
-  doc.fontSize(8).font('Helvetica-Bold')
-  let x = 50
-  const widths = Object.values(_cols) as number[]
-  for (let i = 0; i < headers.length; i++) {
-    const w = widths[i] ?? 100
-    doc.text(headers[i]!, x, y, { width: w })
-    x += w
-  }
-  y += 14
-  hline(doc, y, 50)
-  return y + 3
-}
-
-function renderTableRow(doc: PDFKit.PDFDocument, y: number, cols: Array<{ text: string; width: number }>): number {
-  doc.fontSize(8).font('Helvetica')
-  let x = 50
-  for (const col of cols) {
-    doc.text(col.text, x, y, { width: col.width === 0 ? 150 : col.width, lineBreak: false })
-    x += col.width === 0 ? 150 : col.width
-  }
-  return y + 14
 }
 
 export async function generateKlassenPDF(klassenErgebnis: KlassenErgebnis, outputPath: string): Promise<void> {

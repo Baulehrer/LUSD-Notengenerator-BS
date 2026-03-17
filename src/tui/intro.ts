@@ -30,7 +30,6 @@ function renderMatrixFrame(): void {
     let line = ''
     for (let c = 0; c < COLS; c++) {
       const ch = randomChar()
-      // ~10% chance of bright green (highlight)
       if (Math.random() < 0.1) {
         line += brightGreen(ch)
       } else {
@@ -40,14 +39,6 @@ function renderMatrixFrame(): void {
     lines.push(line)
   }
   process.stdout.write(lines.join('\n') + '\n')
-}
-
-async function typewriter(text: string, delayMs = 40): Promise<void> {
-  for (let i = 0; i <= text.length; i++) {
-    process.stdout.write(`\r${text.slice(0, i)}`)
-    await sleep(delayMs)
-  }
-  process.stdout.write('\n')
 }
 
 export async function showIntro() {
@@ -63,7 +54,6 @@ export async function showIntro() {
   // Phase 2: Clear → FBS ASCII-Art in red/cyan
   process.stdout.write('\x1b[2J\x1b[H')
 
-  // Center the ASCII art (24 chars wide)
   const indent = ' '.repeat(8)
   for (const line of FBS_ASCII) {
     const coloredLine = line.split('').map(ch => {
@@ -73,14 +63,6 @@ export async function showIntro() {
     }).join('')
     process.stdout.write(indent + coloredLine + '\n')
   }
-
-  process.stdout.write('\n')
-
-  // Phase 3: Typewriter subtitles
-  process.stdout.write(indent)
-  await typewriter(cyan('Kompetenzzentrum'), 35)
-  process.stdout.write(indent)
-  await typewriter(cyan('Prozess'), 50)
 
   await sleep(800)
 

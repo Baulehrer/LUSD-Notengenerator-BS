@@ -18,25 +18,37 @@ const FACH_NAMEN: Record<string, string> = {
   ENG: 'Englisch'
 }
 
-const NOTE_OPTIONS = [
-  { value: 0, label: 'Nicht unterrichtet' },
-  { value: 1, label: '1 (sehr gut)' },
-  { value: 2, label: '2 (gut)' },
-  { value: 3, label: '3 (befriedigend)' },
-  { value: 4, label: '4 (ausreichend)' },
-  { value: 5, label: '5 (mangelhaft)' },
-  { value: 6, label: '6 (ungenügend)' }
-]
+// ── Note-Skala einmal anzeigen ──────────────────────────────────
+function printNoteSkala(): void {
+  console.log(
+    '\x1b[2m' +
+    '  1  sehr gut\n' +
+    '  2  gut\n' +
+    '  3  befriedigend\n' +
+    '  4  ausreichend\n' +
+    '  5  mangelhaft\n' +
+    '  6  ungenügend\n' +
+    '  0  nicht unterrichtet' +
+    '\x1b[0m'
+  )
+}
 
-const NOTE_OPTIONS_EDIT = [
-  { value: null, label: '∅  Nicht unterrichtet' },
-  { value: 1, label: '1 – sehr gut' },
-  { value: 2, label: '2 – gut' },
-  { value: 3, label: '3 – befriedigend' },
-  { value: 4, label: '4 – ausreichend' },
-  { value: 5, label: '5 – mangelhaft' },
-  { value: 6, label: '6 – ungenügend' }
-]
+// ── Einzelne Note per Tastatur eingeben ────────────────────────
+// initialValue '4' = versteckte 3,5: 3 Tasten bis Note 1 (Backspace+'1'+Enter),
+// 3 Tasten bis Note 6 (Backspace+'6'+Enter), sofort Enter für Note 4.
+async function promptNote(label: string): Promise<number | null | symbol> {
+  const input = await p.text({
+    message: label,
+    initialValue: '4',
+    validate: (v) => {
+      const n = parseInt(v?.trim() ?? '', 10)
+      if (isNaN(n) || n < 0 || n > 6) return 'Gültig: 1–6 (oder 0 = nicht unterrichtet)'
+    }
+  })
+  if (p.isCancel(input)) return input as symbol
+  const n = parseInt((input as string).trim(), 10)
+  return n === 0 ? null : n
+}
 
 function getHalbjahre(stufeSemester: string): string[] {
   const idx = ALL_HJ.indexOf(stufeSemester)
@@ -113,7 +125,8 @@ export async function einzelfallBerechnung(berufeLoader: BerufeLoader, einstellu
   // ── LF-Noten ────────────────────────────────────────────────────
   const lernfeldNoten = new Map<string, NoteEintrag[]>()
 
-  p.log.step('Noten der Lernfelder eingeben (1-6, oder 0 für nicht unterrichtet)')
+  p.log.step('Noten der Lernfelder eingeben')
+  printNoteSkala()
 
   for (const lf of LERNFELDER) {
     const stunden = berufData.lernfelder.get(lf) ?? 0
@@ -122,15 +135,10 @@ export async function einzelfallBerechnung(berufeLoader: BerufeLoader, einstellu
       continue
     }
 
-    const noteInput = await p.select({
-      message: `${lf} (${stunden}h)`,
-      options: NOTE_OPTIONS
-    })
+    const result = await promptNote(`${lf} (${stunden}h)`)
+    if (p.isCancel(result)) return
 
-    if (p.isCancel(noteInput)) return
-
-    const note = noteInput === 0 ? null : noteInput as number
-    lernfeldNoten.set(lf, [{ note, lehrer: '' }])
+    lernfeldNoten.set(lf, [{ note: result as number | null, lehrer: '' }])
   }
 
   // ── Allg. Fächer: pro Halbjahr ──────────────────────────────────
@@ -150,15 +158,9 @@ export async function einzelfallBerechnung(berufeLoader: BerufeLoader, einstellu
 
     for (const hj of HALBJAHRE) {
       const stunden = einstellungen.halbjahrStunden[hj] ?? 0
-      const noteInput = await p.select({
-        message: `${fachName} in ${hj} (${stunden}h)`,
-        options: NOTE_OPTIONS
-      })
-
-      if (p.isCancel(noteInput)) return
-
-      const note = noteInput === 0 ? null : noteInput as number
-      notenFuerFach.push({ note, lehrer: '' })
+      const result = await promptNote(`${fachName} in ${hj} (${stunden}h)`)
+      if (p.isCancel(result)) return
+      notenFuerFach.push({ note: result as number | null, lehrer: '' })
     }
 
     allgFachNoten.set(fach, notenFuerFach)
@@ -166,8 +168,8 @@ export async function einzelfallBerechnung(berufeLoader: BerufeLoader, einstellu
 
   // ── Schüler-Objekt ──────────────────────────────────────────────
   let schueler: Schueler = {
-    nachname: schuelerName.split(',')[0]?.trim() || schuelerName as string,
-    vorname: schuelerName.split(',')[1]?.trim() || '',
+    nachname: (schuelerName as string).split(',')[0]?.trim() || schuelerName as string,
+    vorname: (schuelerName as string).split(',')[1]?.trim() || '',
     klasse: klasse as string,
     beruf: berufData.name,
     stufeSemester: stufeSemester as string,
@@ -216,8 +218,8 @@ export async function einzelfallBerechnung(berufeLoader: BerufeLoader, einstellu
         `Klasse:        ${ergebnis.schueler.klasse}`,
         `Beruf:         ${ergebnis.schueler.beruf}`,
         `${'─'.repeat(46)}`,
-        `BBU-Note:      ${bbuRaw}  →  gerundet: ${ergebnis.bbuNoteGerundet}`,
-        `Gesamtnote:    ${gesamtRaw}  (abgerundet, 2 NKS: ${ergebnis.gesamtnote.toFixed(2)})`,
+        `BBU-Note:      ${bbuRaw}  ->  gerundet: ${ergebnis.bbuNoteGerundet}`,
+        `Gesamtnote:    ${gesamtRaw}  (abgerundet, 2 NKS)`,
         `${'─'.repeat(46)}`,
         'Allgemeine Fächer:',
         ...allgLines,
@@ -288,7 +290,6 @@ export async function einzelfallBerechnung(berufeLoader: BerufeLoader, einstellu
       const isAllgFach = ALLGEMEINE_FAECHER.includes(fach as typeof ALLGEMEINE_FAECHER[number])
 
       if (isAllgFach && HALBJAHRE.length > 1) {
-        // Edit per-HJ: first select which HJ
         const currentNoten = schueler.noten.allgemeineFaecher.get(fach as string) || []
         const hjOptions = HALBJAHRE.map((hj, i) => {
           const note = currentNoten[i]?.note
@@ -300,27 +301,25 @@ export async function einzelfallBerechnung(berufeLoader: BerufeLoader, einstellu
         if (p.isCancel(hjSelection) || hjSelection === '__back__') continue
 
         const hjIdx = HALBJAHRE.indexOf(hjSelection as string)
-        const newNote = await p.select({ message: `Neue Note für ${fach} in ${hjSelection}`, options: NOTE_OPTIONS_EDIT })
-        if (p.isCancel(newNote)) continue
+        const result = await promptNote(`Neue Note für ${fach} in ${hjSelection}`)
+        if (p.isCancel(result)) continue
 
-        const note = newNote as number | null
         const allgemeineFaecher = new Map(schueler.noten.allgemeineFaecher)
         const updatedNoten = [...(allgemeineFaecher.get(fach as string) || [])]
-        updatedNoten[hjIdx] = { note, lehrer: '' }
+        updatedNoten[hjIdx] = { note: result as number | null, lehrer: '' }
         allgemeineFaecher.set(fach as string, updatedNoten)
         schueler = { ...schueler, noten: { ...schueler.noten, allgemeineFaecher } }
       } else {
-        const newNote = await p.select({ message: `Neue Note für ${fach}`, options: NOTE_OPTIONS_EDIT })
-        if (p.isCancel(newNote)) continue
+        const result = await promptNote(`Neue Note für ${fach}`)
+        if (p.isCancel(result)) continue
 
-        const note = newNote as number | null
         const lernfelder = new Map(schueler.noten.lernfelder)
         const allgemeineFaecher = new Map(schueler.noten.allgemeineFaecher)
 
         if (lernfelder.has(fach as string)) {
-          lernfelder.set(fach as string, [{ note, lehrer: '' }])
+          lernfelder.set(fach as string, [{ note: result as number | null, lehrer: '' }])
         } else {
-          allgemeineFaecher.set(fach as string, [{ note, lehrer: '' }])
+          allgemeineFaecher.set(fach as string, [{ note: result as number | null, lehrer: '' }])
         }
         schueler = { ...schueler, noten: { lernfelder, allgemeineFaecher } }
       }

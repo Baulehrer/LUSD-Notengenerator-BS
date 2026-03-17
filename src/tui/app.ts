@@ -1,7 +1,6 @@
 import * as p from '@clack/prompts'
 import { BerufeLoader } from '../import/berufe-loader'
 import { einzelfallBerechnung } from './screens/einzelfall'
-import { klassenberechnung } from './screens/klassenberechnung'
 import { einstellungenScreen } from './screens/einstellungen'
 import { showIntro } from './intro'
 import { ladeEinstellungen } from '../config/einstellungen'
@@ -35,7 +34,7 @@ export async function main() {
       message: 'Was möchtest du tun?',
       options: [
         { value: 'einzelfall', label: '📝 Einzelfallberechnung (Abgangszeugnis)', hint: 'Manuelle Eingabe für einen Schüler' },
-        { value: 'klasse', label: '📊 Klassenberechnung (Abschlusszeugnis)', hint: 'LUSD-Export importieren' },
+        { value: 'klasse', label: '📊 Klassenberechnung (Abschlusszeugnis)', hint: 'bald verfügbar' },
         { value: 'einstellungen', label: '⚙️  Einstellungen', hint: 'Halbjahr-Stunden konfigurieren' },
         { value: 'exit', label: '❌ Beenden', hint: 'Programm schließen' }
       ]
@@ -51,7 +50,7 @@ export async function main() {
         await einzelfallBerechnung(berufeLoader, einstellungen)
         break
       case 'klasse':
-        await klassenberechnung(berufeLoader)
+        p.log.info('Klassenberechnung ist in Entwicklung und wird bald verfügbar sein.')
         break
       case 'einstellungen':
         await einstellungenScreen(einstellungen)
