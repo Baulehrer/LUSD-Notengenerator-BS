@@ -70,3 +70,18 @@ export const HALBJAHRE_STUNDEN: Map<string, number> = new Map([
   ['12/2', 20],
   ['13/1', 20],
 ])
+
+// ── Einzelfall-Specific Types ─────────────────────────────────────
+
+export type EinzelfallStep = 'name' | 'klasse' | 'semester' | 'beruf' | 'lernfelder' | 'allgFaecher' | 'preview' | 'ergebnis'
+
+export interface EinzelfallDraft {
+  id: string
+  createdAt: string
+  updatedAt: string
+  schueler: Partial<Schueler>
+  lastNote: number | null
+  currentStep: EinzelfallStep
+  berufName: string | null
+  halbjahre: string[]
+}
