@@ -1,106 +1,61 @@
 
-Default to using Bun instead of Node.js.
+# CLAUDE.md
 
-- Use `bun <file>` instead of `node <file>` or `ts-node <file>`
-- Use `bun test` instead of `jest` or `vitest`
-- Use `bun build <file.html|file.ts|file.css>` instead of `webpack` or `esbuild`
-- Use `bun install` instead of `npm install` or `yarn install` or `pnpm install`
-- Use `bun run <script>` instead of `npm run <script>` or `yarn run <script>` or `pnpm run <script>`
-- Use `bunx <package> <command>` instead of `npx <package> <command>`
-- Bun automatically loads .env, so don't use dotenv.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## APIs
+## Project Overview
 
-- `Bun.serve()` supports WebSockets, HTTPS, and routes. Don't use `express`.
-- `bun:sqlite` for SQLite. Don't use `better-sqlite3`.
-- `Bun.redis` for Redis. Don't use `ioredis`.
-- `Bun.sql` for Postgres. Don't use `pg` or `postgres.js`.
-- `WebSocket` is built-in. Don't use `ws`.
-- Prefer `Bun.file` over `node:fs`'s readFile/writeFile
-- Bun.$`ls` instead of execa.
+CLI tool for calculating and exporting student grades at German vocational schools (Berufsschule). Calculates weighted averages for BBU (Berufsbezogener Unterricht) and general subjects based on lesson hours per semester.
 
-## Testing
+## Commands
 
-Use `bun test` to run tests.
+```bash
+# Run the TUI application
+bun run src/main.ts
 
-```ts#index.test.ts
-import { test, expect } from "bun:test";
+# Run tests
+bun test
 
-test("hello world", () => {
-  expect(1).toBe(1);
-});
+# Run specific test file
+bun test src/core/grades.test.ts
 ```
 
-## Frontend
+## Architecture
 
-Use HTML imports with `Bun.serve()`. Don't use `vite`. HTML imports fully support React, CSS, Tailwind.
+**Entry Point:** `src/main.ts` → delegates to `src/tui/app.ts`
 
-Server:
+**Core Module** (`src/core/grades.ts`):
+- Grade calculation with hours-based weighting
+- BBU calculates weighted average across Lernfelder
+- General subjects weighted by semester hours
+- `calculateSchuelerNoten()` is the main entry for grade computation
 
-```ts#index.ts
-import index from "./index.html"
+**Import Pipeline:**
+- `BerufeLoader` loads Beruf→Lernfelder→Stunden mapping from Excel
+- `lusd-parser.ts` parses LUSD export files (Zeugnis + Historie)
+- Auto-downloads `data/BS_Schulformen_Berufe_Lernfelder.xlsx` if missing
 
-Bun.serve({
-  routes: {
-    "/": index,
-    "/api/users/:id": {
-      GET: (req) => {
-        return new Response(JSON.stringify({ id: req.params.id }));
-      },
-    },
-  },
-  // optional websocket support
-  websocket: {
-    open: (ws) => {
-      ws.send("Hello, world!");
-    },
-    message: (ws, message) => {
-      ws.send(message);
-    },
-    close: (ws) => {
-      // handle close
-    }
-  },
-  development: {
-    hmr: true,
-    console: true,
-  }
-})
-```
+**TUI** (`src/tui/`):
+- Uses `@clack/prompts` for interactive CLI
+- Screens: einzelfall (individual calculation), einstellungen (settings)
+- `beruf-search.ts` provides fuzzy Beruf search with typeahead
 
-HTML files can import .tsx, .jsx or .js files directly and Bun's bundler will transpile & bundle automatically. `<link>` tags can point to stylesheets and Bun's CSS bundler will bundle.
+**PDF Export** (`src/export/pdf.ts`):
+- Uses `pdfkit` for PDF generation
+- Renders BBU and general subjects tables with grades
 
-```html#index.html
-<html>
-  <body>
-    <h1>Hello, world!</h1>
-    <script type="module" src="./frontend.tsx"></script>
-  </body>
-</html>
-```
+**Types** (`src/types/index.ts`):
+- `Schueler`, `Beruf`, `Berechnungsergebnis` defined here
+- Constants: `LERNFELDER` (LF01-LF18), `ALLGEMEINE_FAECHER` (D, POWI, RKA, SPO, ENG)
 
-With the following `frontend.tsx`:
+## Key Data Files
 
-```tsx#frontend.tsx
-import React from "react";
-import { createRoot } from "react-dom/client";
+- `data/BS_Schulformen_Berufe_Lernfelder.xlsx` - Beruf definitions with hours per Lernfeld (auto-downloaded)
+- `data/einstellungen.json` - User settings (hours per semester - created on first run)
+- `output/` - Generated PDFs
 
-// import .css files directly and it works
-import './index.css';
+## Configuration
 
-const root = createRoot(document.body);
-
-export default function Frontend() {
-  return <h1>Hello, world!</h1>;
-}
-
-root.render(<Frontend />);
-```
-
-Then, run index.ts
-
-```sh
-bun --hot ./index.ts
-```
-
-For more information, read the Bun API docs in `node_modules/bun-types/docs/**.mdx`.
+Semester hours defined in `src/config/einstellungen.ts`:
+- Default: 10/2: 40h, 11/1-13/1: each 20h
+- User can customize via TUI settings screen
