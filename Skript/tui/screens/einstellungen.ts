@@ -12,13 +12,16 @@ export async function einstellungenScreen(einstellungen: Einstellungen): Promise
     const hjOptions = ALL_HJ.map(hj => ({
       value: hj,
       label: `${hj}  →  ${einstellungen.halbjahrStunden[hj] ?? DEFAULT_HALBJAHR_STUNDEN[hj]}h`,
-      hint: 'Stunden für allgemeine Fächer'
+      hint: 'Gewichtung — bestimmt Einfluss auf Endnote'
     }))
 
+    const tippsLabel = einstellungen.tutorialTipps ? 'AN' : 'AUS'
+
     const action = await p.select({
-      message: 'Halbjahr-Stunden (allgemeine Fächer) — Halbjahr auswählen zum Bearbeiten',
+      message: 'Einstellung auswählen zum Bearbeiten',
       options: [
         ...hjOptions,
+        { value: '__tipps__', label: `💡 Kontextuelle Tipps: ${tippsLabel}`, hint: 'Erklärungen bei jedem Schritt anzeigen' },
         { value: '__reset__', label: '↺ Auf Standardwerte zurücksetzen', hint: '' },
         { value: '__back__', label: '← Zurück', hint: '' }
       ]
@@ -26,8 +29,17 @@ export async function einstellungenScreen(einstellungen: Einstellungen): Promise
 
     if (p.isCancel(action) || action === '__back__') return
 
+    if (action === '__tipps__') {
+      einstellungen.tutorialTipps = !einstellungen.tutorialTipps
+      await speichereEinstellungen(einstellungen)
+      p.log.success(`Kontextuelle Tipps: ${einstellungen.tutorialTipps ? 'AN' : 'AUS'}`)
+      continue
+    }
+
     if (action === '__reset__') {
-      einstellungen.halbjahrStunden = defaultEinstellungen().halbjahrStunden
+      const defaults = defaultEinstellungen()
+      einstellungen.halbjahrStunden = defaults.halbjahrStunden
+      einstellungen.tutorialTipps = defaults.tutorialTipps
       await speichereEinstellungen(einstellungen)
       p.log.success('Standardwerte wiederhergestellt')
       continue

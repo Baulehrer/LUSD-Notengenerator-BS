@@ -1,52 +1,49 @@
 # LUSD Notengenerator
 
-CLI-Tool zur Berechnung und zum Export von Schülernoten an deutschen Berufsschulen.
+Berechnet Zeugnisnoten für Berufsschüler an hessischen Berufsschulen.
+
+## Aufgabe
+
+Lehrkräfte an Berufsschulen müssen für Abgangszeugnisse gewichtete Durchschnittsnoten berechnen — getrennt für BBU (Berufsbezogener Unterricht, gewichtet nach Lernfeld-Stunden) und allgemeine Fächer (gewichtet nach Unterrichtsstunden pro Halbjahr). Dieses CLI-Tool automatisiert die Berechnung und erstellt ein PDF-Dokument mit der Notenaufschlüsselung.
 
 ## Features
 
-- **Einzelfallberechnung:** Manuelle Eingabe für Abgangszeugnisse
-- **Klassenberechnung:** Import von LUSD-Exporten für Abschlusszeugnisse
-- **PDF-Export:** Generierung von Zeugnis-PDFs
+- **Einzelfallberechnung** — Schritt-für-Schritt-Eingabe für einen Schüler mit BBU- und Gesamtnote
+- **Beruf-Suche** — Fuzzy-Suche über alle hessischen Ausbildungsberufe mit Typeahead
+- **LF-Kappung** — Nur Lernfelder anzeigen, die zum Ausscheide-Semester gehören
+- **PDF-Export** — Professionelles PDF mit Logos, Notenaufschlüsselung und Unterschriftsfeld
+- **Entwürfe** — Unfertige Eingaben werden automatisch gespeichert und können fortgesetzt werden
+- **Tutorial** — Geführter Durchlauf mit Beispieldaten, erklärt jeden Berechnungsschritt
+- **Kontextuelle Tipps** — Erklärungen bei jedem Eingabeschritt (abschaltbar)
+- **Einstellungen** — Halbjahr-Stunden und Tutorial-Tipps konfigurieren
 
-## Installation
+## Geplante Features
+
+- **Klassenberechnung** — Import aus LUSD-Export, Berechnung für ganze Klassen
+- **Weitere Berichte** — Klassenübersicht, Notenverteilung
+
+## Installation & Start
 
 ```bash
+cd Skript
 bun install
+bun run start
 ```
 
-## Benutzung
-
-```bash
-bun run src/main.ts
-```
-
-## Projektstruktur
+## Ordnerstruktur
 
 ```
-src/
-├── main.ts              # Einstiegspunkt
-├── core/
-│   └── grades.ts        # Notenberechnung (BBU, Allgemeine Fächer)
-├── import/
-│   ├── berufe-loader.ts # Berufe-Daten aus Excel laden
-│   └── lusd-parser.ts   # LUSD-Export-Dateien parsen
-├── export/
-│   └── pdf.ts           # PDF-Generierung
-├── tui/
-│   ├── app.ts           # Hauptmenü
-│   └── screens/         # Einzelne Bildschirme
-└── types/
-    └── index.ts         # Gemeinsame Typdefinitionen
-```
+Skript/              Source Code + Dependencies
+  ├── core/          Notenberechnung
+  ├── tui/           Terminal-UI (Screens, Tipps, Tutorial)
+  ├── export/        PDF-Generierung
+  ├── import/        Excel/LUSD-Parser
+  ├── config/        Einstellungen
+  ├── assets/        Logos (Base64 für Standalone)
+  └── types/         TypeScript-Typen
 
-## Daten
-
-Die Datei `data/BS_Schulformen_Berufe_Lernfelder.xlsx` muss vorhanden sein und enthält die Berufe mit ihren Lernfeldern und Stundenanteilen.
-
-## Tests
-
-```bash
-bun test
+Input/               Nutzerdaten (Excel, Einstellungen)
+Output/              Generierte PDFs
 ```
 
 ## Lizenz

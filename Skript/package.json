@@ -1,9 +1,16 @@
 {
   "name": "lusd-notengenerator",
-  "version": "1.0.0",
+  "version": "0.5.0",
   "module": "index.ts",
   "type": "module",
   "private": true,
+  "scripts": {
+    "start": "bun run main.ts",
+    "test": "bun test"
+  },
+  "bin": {
+    "lusd-notengenerator": "main.ts"
+  },
   "devDependencies": {
     "@types/bun": "latest",
     "@types/pdfkit": "^0.17.5"

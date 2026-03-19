@@ -8,6 +8,11 @@ import { calculateSchuelerNoten } from '../../core/grades'
 import { generatePDF } from '../../export/pdf'
 import { selectBerufWithSearch } from '../beruf-search'
 import { loadEinzelfallDrafts, saveEinzefallDraft, deleteEinzefallDraft } from '../history'
+import { STEP_TIPS } from '../tips'
+import { promptNoteScale } from '../note-scale'
+import type { Beruf } from '../../types'
+
+const ROOT_DIR = path.join(import.meta.dir, '..', '..', '..')
 
 const LERNFELDER = ['LF01', 'LF02', 'LF03', 'LF04', 'LF05', 'LF06', 'LF07', 'LF08', 'LF09', 'LF10', 'LF11', 'LF12', 'LF13', 'LF14', 'LF15', 'LF16', 'LF17', 'LF18'] as const
 const ALLGEMEINE_FAECHER = ['D', 'POWI', 'RKA', 'SPO', 'ENG'] as const
@@ -82,14 +87,31 @@ function buildSchueler(state: SessionState): Schueler {
   }
 }
 
-function printNoteSkala(): void {
-  console.log(
-    '\x1b[2m' +
-    '  1  sehr gut    2  gut    3  befriedigend\n' +
-    '  4  ausreichend 5  mangelhaft  6  ungenügend\n' +
-    '  0  nicht unterrichtet' +
-    '\x1b[0m'
-  )
+// ── LF-Kappung ──────────────────────────────────────────────────────────────
+
+const STUNDEN_GRENZEN: Record<string, number> = {
+  '10/2': 320,
+  '11/1': 600, '11/2': 600,
+  '12/1': 880, '12/2': 880,
+  '13/1': 1020,
+}
+
+function getRelevanteLernfelder(
+  beruf: Beruf,
+  semester: string
+): { lf: string; stunden: number }[] {
+  const maxStunden = STUNDEN_GRENZEN[semester] ?? Infinity
+  const result: { lf: string; stunden: number }[] = []
+  let cumulative = 0
+
+  for (const lf of LERNFELDER) {
+    const stunden = beruf.lernfelder.get(lf) ?? 0
+    if (stunden === 0) continue
+    cumulative += stunden
+    if (cumulative > maxStunden) break
+    result.push({ lf, stunden })
+  }
+  return result
 }
 
 // ── Extended Note Prompt ─────────────────────────────────────────────────────
@@ -225,14 +247,14 @@ function showPreviewScreen(
   lines.push('BBU (Lernfelder):')
 
   const berufData = berufeLoader.getBeruf(berufName)
-  for (const lf of LERNFELDER) {
-    const stunden = berufData?.lernfelder.get(lf) ?? 0
-    if (stunden === 0) continue
-
-    const eintraege = state.schueler.noten?.lernfelder?.get(lf) ?? []
-    const note = [...eintraege].reverse().find(n => n.note !== null)?.note ?? '–'
-    const punkte = typeof note === 'number' ? ` → ${note * stunden} Pkt.` : ''
-    lines.push(`  ${lf} (${stunden}h): ${note}${punkte}`)
+  if (berufData) {
+    const relevanteLFs = getRelevanteLernfelder(berufData, state.schueler.stufeSemester ?? '13/1')
+    for (const { lf, stunden } of relevanteLFs) {
+      const eintraege = state.schueler.noten?.lernfelder?.get(lf) ?? []
+      const note = [...eintraege].reverse().find(n => n.note !== null)?.note ?? '–'
+      const punkte = typeof note === 'number' ? ` → ${note * stunden} Pkt.` : ''
+      lines.push(`  ${lf} (${stunden}h): ${note}${punkte}`)
+    }
   }
 
   lines.push('')
@@ -324,8 +346,10 @@ async function handlePDFExport(
   halbjahrStunden: Record<string, number>,
   draftId: string | null
 ): Promise<boolean> {
-  const filename = `${schueler.nachname}_${schueler.vorname}_noten.pdf`
-  const outputDir = path.join(process.cwd(), 'output')
+  const now = new Date()
+  const dateStr = `${now.getFullYear()}_${String(now.getMonth() + 1).padStart(2, '0')}_${String(now.getDate()).padStart(2, '0')}`
+  const filename = `${dateStr}_${schueler.klasse}_${schueler.nachname}.pdf`
+  const outputDir = path.join(ROOT_DIR, 'Output')
   const outputPath = path.join(outputDir, filename)
 
   if (!fs.existsSync(outputDir)) {
@@ -417,17 +441,15 @@ async function stepKlasse(state: SessionState): Promise<EinzelfallStep | 'done'>
 
 async function stepSemester(state: SessionState): Promise<EinzelfallStep | 'done'> {
   const currentSemester = state.schueler.stufeSemester || undefined
+  const semesterOptions = ALL_HJ.map(hj => {
+    const hjList = ALL_HJ.slice(0, ALL_HJ.indexOf(hj) + 1).join(', ')
+    return { value: hj, label: hj, hint: `Halbjahre: ${hjList}` }
+  })
+
   const stufeSemester = await p.select({
     message: 'Ausscheide-Semester',
     initialValue: currentSemester,
-    options: [
-      { value: '10/2', label: '10/2' },
-      { value: '11/1', label: '11/1' },
-      { value: '11/2', label: '11/2' },
-      { value: '12/1', label: '12/1' },
-      { value: '12/2', label: '12/2' },
-      { value: '13/1', label: '13/1' },
-    ]
+    options: semesterOptions,
   })
 
   if (p.isCancel(stufeSemester)) return 'klasse'
@@ -448,12 +470,10 @@ async function stepBeruf(state: SessionState, berufeLoader: BerufeLoader): Promi
   persistDraft(state)
 
   const berufData = berufeLoader.getBeruf(berufName)
-  if (berufData) {
-    const lfInfo = Array.from(berufData.lernfelder.entries())
-      .filter(([_, s]) => s > 0)
-      .map(([lf, s]) => `${lf}=${s}`)
-      .join(', ')
-    p.log.info(`Lernfelder-Stunden: ${lfInfo}`)
+  if (berufData && state.schueler.stufeSemester) {
+    const relevante = getRelevanteLernfelder(berufData, state.schueler.stufeSemester)
+    const lfInfo = relevante.map(({ lf, stunden }) => `${lf}=${stunden}`).join(', ')
+    p.log.info(`Lernfelder für ${state.schueler.stufeSemester}: ${lfInfo}`)
   }
 
   return 'lernfelder'
@@ -469,40 +489,28 @@ async function stepLernfelder(
   if (!berufData) return 'beruf'
 
   p.log.step('Noten der Lernfelder eingeben')
-  printNoteSkala()
 
   const lernfeldNoten = state.schueler.noten?.lernfelder ?? new Map()
+  const relevanteLFs = getRelevanteLernfelder(berufData, state.schueler.stufeSemester ?? '13/1')
 
-  for (const lf of LERNFELDER) {
-    const stunden = berufData.lernfelder.get(lf) ?? 0
-    if (stunden === 0) continue
+  for (let i = 0; i < relevanteLFs.length; i++) {
+    const { lf, stunden } = relevanteLFs[i]!
 
     const currentEintraege = lernfeldNoten.get(lf) ?? []
     const currentNote = [...currentEintraege].reverse().find(n => n.note !== null)?.note ?? null
+    const initialNote = currentNote ?? state.lastNote ?? 3
 
-    const result = await promptNoteExtended(`${lf} (${stunden}h)`, currentNote ?? state.lastNote, true)
-    if (p.isCancel(result) || typeof result === 'symbol') return 'beruf'
-    if (result.action === 'back') return 'beruf'
-    if (result.action === 'all-4') {
-      const remaining = LERNFELDER.slice(LERNFELDER.indexOf(lf))
-      for (const rlf of remaining) {
-        if ((berufData.lernfelder.get(rlf) ?? 0) > 0) {
-          lernfeldNoten.set(rlf, [{ note: 4, lehrer: '' }])
-        }
-      }
-      state.lastNote = 4
-      state.isDirty = true
-      p.log.info(`${remaining.filter(rlf => (berufData.lernfelder.get(rlf) ?? 0) > 0).length} Lernfelder auf 4 gesetzt`)
-      break
-    }
-    if (result.action === 'skip') {
-      lernfeldNoten.set(lf, [{ note: null, lehrer: '' }])
-      state.isDirty = true
+    const result = await promptNoteScale(`${lf} (${stunden}h)`, initialNote)
+
+    if (result.action === 'back') {
+      if (i === 0) return 'beruf'
+      // Go back to previous LF
+      i -= 2
       continue
     }
 
     lernfeldNoten.set(lf, [{ note: result.note, lehrer: '' }])
-    state.lastNote = result.note
+    if (result.note !== null) state.lastNote = result.note
     state.isDirty = true
   }
 
@@ -519,46 +527,59 @@ async function stepAllgFaecher(
 
   const allgFachNoten = state.schueler.noten?.allgemeineFaecher ?? new Map()
 
+  if (state.halbjahre.length === 0) {
+    for (const fach of ALLGEMEINE_FAECHER) {
+      allgFachNoten.set(fach, [{ note: null, lehrer: '' }])
+    }
+    state.schueler.noten = { ...state.schueler.noten!, allgemeineFaecher: allgFachNoten }
+    persistDraft(state)
+    return 'preview'
+  }
+
+  // Build flat list of (fach, hjIndex) pairs for linear navigation with back
+  const entries: { fach: string; fachName: string; hjIndex: number; hj: string; stunden: number }[] = []
   for (const fach of ALLGEMEINE_FAECHER) {
     const fachName = FACH_NAMEN[fach] || fach
-
-    if (state.halbjahre.length === 0) {
-      allgFachNoten.set(fach, [{ note: null, lehrer: '' }])
-      continue
-    }
-
-    const notenFuerFach: NoteEintrag[] = []
-
     for (let i = 0; i < state.halbjahre.length; i++) {
       const hj = state.halbjahre[i]!
       const stunden = halbjahrStunden[hj] ?? 0
+      entries.push({ fach, fachName, hjIndex: i, hj, stunden })
+    }
+  }
 
-      const currentNoten = allgFachNoten.get(fach) ?? []
-      const currentNote = currentNoten[i]?.note ?? null
+  // Track notes per fach as we go
+  const tempNoten: Map<string, NoteEintrag[]> = new Map()
+  for (const fach of ALLGEMEINE_FAECHER) {
+    tempNoten.set(fach, [...(allgFachNoten.get(fach) ?? [])])
+  }
 
-      const result = await promptNoteExtended(`${fachName} in ${hj} (${stunden}h)`, currentNote ?? state.lastNote, true)
-      if (p.isCancel(result) || typeof result === 'symbol') return 'lernfelder'
-      if (result.action === 'back') return 'lernfelder'
-      if (result.action === 'all-4') {
-        for (let j = i; j < state.halbjahre.length; j++) {
-          notenFuerFach.push({ note: 4, lehrer: '' })
-        }
-        state.lastNote = 4
-        state.isDirty = true
-        break
-      }
-      if (result.action === 'skip') {
-        notenFuerFach.push({ note: null, lehrer: '' })
-        state.isDirty = true
-        continue
-      }
+  for (let idx = 0; idx < entries.length; idx++) {
+    const { fach, fachName, hjIndex, hj, stunden } = entries[idx]!
 
-      notenFuerFach.push({ note: result.note, lehrer: '' })
-      state.lastNote = result.note
-      state.isDirty = true
+    const currentNoten = tempNoten.get(fach) ?? []
+    const currentNote = currentNoten[hjIndex]?.note ?? null
+    const initialNote = currentNote ?? state.lastNote ?? 3
+
+    const result = await promptNoteScale(`${fachName} in ${hj} (${stunden}h)`, initialNote)
+
+    if (result.action === 'back') {
+      if (idx === 0) return 'lernfelder'
+      idx -= 2
+      continue
     }
 
-    allgFachNoten.set(fach, notenFuerFach)
+    // Set the note at the right position
+    const noten = tempNoten.get(fach) ?? []
+    while (noten.length <= hjIndex) noten.push({ note: null, lehrer: '' })
+    noten[hjIndex] = { note: result.note, lehrer: '' }
+    tempNoten.set(fach, noten)
+
+    if (result.note !== null) state.lastNote = result.note
+    state.isDirty = true
+  }
+
+  for (const [fach, noten] of tempNoten) {
+    allgFachNoten.set(fach, noten)
   }
 
   state.schueler.noten = { ...state.schueler.noten!, allgemeineFaecher: allgFachNoten }
@@ -759,9 +780,9 @@ async function stepErgebnis(
   )
 
   // Menü-Optionen dynamisch aufbauen
-  const options: { value: string; label: string }[] = [
-    { value: 'pdf', label: '📄 PDF exportieren' },
-    { value: 'note', label: '📝 Note ändern' },
+  const options: { value: string; label: string; hint?: string }[] = [
+    { value: 'pdf', label: '📄 PDF exportieren', hint: `Speichert als ${new Date().getFullYear()}_…_Klasse_Name.pdf` },
+    { value: 'note', label: '📝 Note ändern', hint: 'Einzelne Note korrigieren mit Vorher/Nachher-Vergleich' },
   ]
   if (state.undoStack.size > 0) {
     const last = state.undoStack.getAll().at(-1)!
@@ -810,7 +831,7 @@ async function editNote(
   state: SessionState,
   schueler: Schueler,
   ergebnis: ReturnType<typeof calculateSchuelerNoten>,
-  berufData: import('../../types').Beruf,
+  berufData: Beruf,
   halbjahrStunden: Record<string, number>
 ): Promise<EinzelfallStep | 'done'> {
   const fachOptions: { value: string; label: string; hint?: string }[] = []
@@ -928,6 +949,10 @@ async function runStateMachine(
   const halbjahrStunden = einstellungen.halbjahrStunden as Record<string, number>
 
   while (state.currentStep !== 'done') {
+    if (einstellungen.tutorialTipps && STEP_TIPS[state.currentStep]) {
+      p.log.message('\x1b[2m💡 ' + STEP_TIPS[state.currentStep] + '\x1b[0m')
+    }
+
     let nextStep: EinzelfallStep | 'done' = 'done'
 
     switch (state.currentStep) {

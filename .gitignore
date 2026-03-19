@@ -38,3 +38,13 @@ Vorlage/
 
 # Data files (LUSD exports, Excel with student data)
 data/
+Input/
+!Input/.gitkeep
+
+# Generated PDFs
+output/
+Output/
+!Output/.gitkeep
+
+# Sessions
+session-*.md

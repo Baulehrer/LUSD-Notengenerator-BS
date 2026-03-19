@@ -1,5 +1,6 @@
 export interface Einstellungen {
   halbjahrStunden: Record<string, number>
+  tutorialTipps: boolean
 }
 
 export const DEFAULT_HALBJAHR_STUNDEN: Record<string, number> = {
@@ -11,10 +12,13 @@ export const DEFAULT_HALBJAHR_STUNDEN: Record<string, number> = {
   '13/1': 20,
 }
 
-const CONFIG_PATH = 'data/einstellungen.json'
+import { join } from 'path'
+
+const ROOT_DIR = join(import.meta.dir, '..', '..')
+const CONFIG_PATH = join(ROOT_DIR, 'Input', 'einstellungen.json')
 
 export function defaultEinstellungen(): Einstellungen {
-  return { halbjahrStunden: { ...DEFAULT_HALBJAHR_STUNDEN } }
+  return { halbjahrStunden: { ...DEFAULT_HALBJAHR_STUNDEN }, tutorialTipps: true }
 }
 
 export async function ladeEinstellungen(): Promise<Einstellungen> {
@@ -22,7 +26,7 @@ export async function ladeEinstellungen(): Promise<Einstellungen> {
     const file = Bun.file(CONFIG_PATH)
     if (await file.exists()) {
       const data = await file.json()
-      return { halbjahrStunden: { ...DEFAULT_HALBJAHR_STUNDEN, ...data.halbjahrStunden } }
+      return { halbjahrStunden: { ...DEFAULT_HALBJAHR_STUNDEN, ...data.halbjahrStunden }, tutorialTipps: data.tutorialTipps ?? true }
     }
   } catch {
     // fallback to defaults

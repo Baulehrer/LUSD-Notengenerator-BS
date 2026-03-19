@@ -1,9 +1,11 @@
 import { test, expect, describe, beforeAll } from 'bun:test'
+import { join } from 'path'
 import { BerufeLoader } from './berufe-loader'
 import * as XLSX from 'xlsx'
 import * as fs from 'fs'
 
-const DATA_FILE = 'data/BS_Schulformen_Berufe_Lernfelder.xlsx'
+const ROOT_DIR = join(import.meta.dir, '..', '..')
+const DATA_FILE = join(ROOT_DIR, 'Input', 'BS_Schulformen_Berufe_Lernfelder.xlsx')
 
 describe('BerufeLoader', () => {
   describe('load', () => {
