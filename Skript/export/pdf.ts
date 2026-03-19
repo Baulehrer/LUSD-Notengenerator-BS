@@ -1,11 +1,7 @@
 import PDFDocument from 'pdfkit'
-import { join } from 'path'
 import type { Berechnungsergebnis, KlassenErgebnis, Beruf } from '../types'
 import { DEFAULT_HALBJAHR_STUNDEN } from '../config/einstellungen'
-
-const ASSETS_DIR = join(import.meta.dir, '..', 'assets')
-const FBS_LOGO = join(ASSETS_DIR, 'fbs-logo.png')
-const LUSD_LOGO = join(ASSETS_DIR, 'lusd-logo.png')
+import { FBS_LOGO, LUSD_LOGO } from '../assets/logos'
 
 const FACH_NAMEN: Record<string, string> = {
   D: 'Deutsch',
@@ -53,11 +49,11 @@ export async function generatePDF(
   })
 }
 
-function tryImage(doc: PDFKit.PDFDocument, path: string, opts: object): void {
+function tryImage(doc: PDFKit.PDFDocument, logo: Buffer, opts: object): void {
   try {
-    doc.image(path, opts)
+    doc.image(logo, opts)
   } catch {
-    // Logo not found — skip silently
+    // Logo not available — skip silently
   }
 }
 
