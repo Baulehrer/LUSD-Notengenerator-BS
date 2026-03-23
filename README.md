@@ -1,28 +1,31 @@
-# LUSD Notengenerator
+# LUSD Notengenerator (BS)
 
-Berechnet Zeugnisnoten für Berufsschüler an hessischen Berufsschulen.
+Zeugnisnoten-Berechnung für hessische Berufsschulen.
 
-## Aufgabe
+## Was macht das Tool?
 
-Lehrkräfte an Berufsschulen müssen für Abgangszeugnisse gewichtete Durchschnittsnoten berechnen — getrennt für BBU (Berufsbezogener Unterricht, gewichtet nach Lernfeld-Stunden) und allgemeine Fächer (gewichtet nach Unterrichtsstunden pro Halbjahr). Dieses CLI-Tool automatisiert die Berechnung und erstellt ein PDF-Dokument mit der Notenaufschlüsselung.
+An Berufsschulen müssen Lehrkräfte für Abgangszeugnisse gewichtete Durchschnittsnoten berechnen. Die BBU-Note (Berufsbezogener Unterricht) ergibt sich aus den Lernfeld-Noten, gewichtet nach Unterrichtsstunden. Die Gesamtnote kombiniert BBU und allgemeine Fächer. Dieses Tool übernimmt die Berechnung und erstellt ein fertiges PDF.
 
 ## Features
 
-- **Einzelfallberechnung** — Schritt-für-Schritt-Eingabe für einen Schüler mit BBU- und Gesamtnote
-- **Beruf-Suche** — Fuzzy-Suche über alle hessischen Ausbildungsberufe mit Typeahead
-- **LF-Kappung** — Nur Lernfelder anzeigen, die zum Ausscheide-Semester gehören
-- **PDF-Export** — Professionelles PDF mit Logos, Notenaufschlüsselung und Unterschriftsfeld
-- **Entwürfe** — Unfertige Eingaben werden automatisch gespeichert und können fortgesetzt werden
-- **Tutorial** — Geführter Durchlauf mit Beispieldaten, erklärt jeden Berechnungsschritt
-- **Kontextuelle Tipps** — Erklärungen bei jedem Eingabeschritt (abschaltbar)
-- **Einstellungen** — Halbjahr-Stunden und Tutorial-Tipps konfigurieren
+- **Notenberechnung** — Gewichtete Durchschnitte für BBU und Gesamtnote, nach Stundentafel
+- **Alle hessischen Ausbildungsberufe** — Beruf suchen, Lernfelder und Stunden werden automatisch geladen
+- **Semester-Filter** — Je nach Ausscheide-Semester werden nur die relevanten Lernfelder angezeigt
+- **Schnelle Noteneingabe** — Inline-Skala mit Zifferntasten, kein Tippen nötig
+- **PDF-Export** — Übersichtliches PDF mit Notenaufschlüsselung, Logos und Unterschriftsfeld
+- **Entwürfe** — Eingaben werden automatisch gespeichert und können später fortgesetzt werden
+- **Tutorial** — Geführter Durchlauf mit Beispieldaten, erklärt jeden Schritt
+- **Tipps** — Kontextuelle Hinweise bei der Eingabe (abschaltbar)
+- **Einstellungen** — Stunden pro Halbjahr und Tipps anpassen
 
-## Geplante Features
+## Geplant
 
-- **Klassenberechnung** — Import aus LUSD-Export, Berechnung für ganze Klassen
-- **Weitere Berichte** — Klassenübersicht, Notenverteilung
+- Klassenberechnung mit LUSD-Import
+- Klassenübersicht und Notenverteilung
 
-## Installation & Start
+## Installation
+
+Voraussetzung: [Bun](https://bun.sh) installiert.
 
 ```bash
 cd Skript
@@ -30,22 +33,10 @@ bun install
 bun run start
 ```
 
-## Ordnerstruktur
-
-```
-Skript/              Source Code + Dependencies
-  ├── core/          Notenberechnung
-  ├── tui/           Terminal-UI (Screens, Tipps, Tutorial)
-  ├── export/        PDF-Generierung
-  ├── import/        Excel/LUSD-Parser
-  ├── config/        Einstellungen
-  ├── assets/        Logos (Base64 für Standalone)
-  └── types/         TypeScript-Typen
-
-Input/               Nutzerdaten (Excel, Einstellungen)
-Output/              Generierte PDFs
-```
-
 ## Lizenz
 
 MIT
+
+## Autor
+
+Stephan Kaufmann

@@ -48,3 +48,11 @@ Output/
 
 # Sessions
 session-*.md
+
+# Claude Code memory/config
+.claude/
+
+# Binaries
+Notengenerator
+Notengenerator.bat
+lusd-notengenerator-*
