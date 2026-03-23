@@ -1,0 +1,48 @@
+name: Build & Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        working-directory: Skript
+        run: bun install
+
+      - name: Run tests
+        working-directory: Skript
+        run: bun test
+
+      - name: Build Linux x64
+        working-directory: Skript
+        run: bun build --compile --target=bun-linux-x64 main.ts --outfile ../Notengenerator-linux
+
+      - name: Build macOS ARM
+        working-directory: Skript
+        run: bun build --compile --target=bun-darwin-arm64 main.ts --outfile ../Notengenerator-macos
+
+      - name: Build Windows x64
+        working-directory: Skript
+        run: bun build --compile --target=bun-windows-x64 main.ts --outfile ../Notengenerator-windows.exe
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            Notengenerator-linux
+            Notengenerator-macos
+            Notengenerator-windows.exe
