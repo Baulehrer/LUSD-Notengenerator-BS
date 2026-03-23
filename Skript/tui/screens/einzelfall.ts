@@ -12,7 +12,9 @@ import { STEP_TIPS } from '../tips'
 import { promptNoteScale } from '../note-scale'
 import type { Beruf } from '../../types'
 
-const ROOT_DIR = path.join(import.meta.dir, '..', '..', '..')
+const ROOT_DIR = typeof Bun !== 'undefined' && process.execPath !== process.argv[1]
+  ? path.dirname(process.execPath)
+  : path.join(import.meta.dir, '..', '..', '..')
 
 const LERNFELDER = ['LF01', 'LF02', 'LF03', 'LF04', 'LF05', 'LF06', 'LF07', 'LF08', 'LF09', 'LF10', 'LF11', 'LF12', 'LF13', 'LF14', 'LF15', 'LF16', 'LF17', 'LF18'] as const
 const ALLGEMEINE_FAECHER = ['D', 'POWI', 'RKA', 'SPO', 'ENG'] as const
