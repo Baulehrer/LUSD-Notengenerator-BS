@@ -51,6 +51,9 @@ session-*.md
 
 # Claude Code memory/config
 .claude/
+CLAUDE.md
+AGENTS.md
+MEMORY.md
 
 # Binaries
 Notengenerator
