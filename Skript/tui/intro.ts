@@ -1,6 +1,4 @@
 const MATRIX_CHARS = '╠╬╗╚╔═╦╣╩╤╧╟╢╥╨░▒▓█▄▀■□▪▫ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%&'
-const COLS = 60
-const ROWS = 16
 
 const FBS_ASCII = [
   '███████╗██████╗ ███████╗',
@@ -23,12 +21,12 @@ function randomChar(): string {
   return MATRIX_CHARS[Math.floor(Math.random() * MATRIX_CHARS.length)]!
 }
 
-function renderMatrixFrame(): void {
+function renderMatrixFrame(cols: number, rows: number): void {
   process.stdout.write('\x1b[H')
   const lines: string[] = []
-  for (let r = 0; r < ROWS; r++) {
+  for (let r = 0; r < rows; r++) {
     let line = ''
-    for (let c = 0; c < COLS; c++) {
+    for (let c = 0; c < cols; c++) {
       const ch = randomChar()
       if (Math.random() < 0.1) {
         line += brightGreen(ch)
@@ -42,22 +40,33 @@ function renderMatrixFrame(): void {
 }
 
 export async function showIntro() {
+  const cols = process.stdout.columns || 80
+  const rows = process.stdout.rows || 24
+
   process.stdout.write('\x1b[?25l') // hide cursor
   process.stdout.write('\x1b[2J\x1b[H') // clear screen
 
-  // Phase 1: Matrix rain (20 frames)
+  // Phase 1: Matrix rain (20 frames, fullscreen)
   for (let i = 0; i < 20; i++) {
-    renderMatrixFrame()
+    renderMatrixFrame(cols, rows)
     await sleep(50)
   }
 
-  // Phase 2: Clear → FBS ASCII-Art in red/cyan
+  // Phase 2: Clear → FBS ASCII-Art centered
   process.stdout.write('\x1b[2J\x1b[H')
 
-  const indent = ' '.repeat(8)
+  const logoWidth = 24  // raw char width of FBS_ASCII lines
+  const indent = ' '.repeat(Math.max(0, Math.floor((cols - logoWidth) / 2)))
+  const vertPad = Math.max(0, Math.floor((rows - FBS_ASCII.length) / 2))
+
+  // Vertical centering
+  for (let i = 0; i < vertPad; i++) {
+    process.stdout.write('\n')
+  }
+
   for (const line of FBS_ASCII) {
     const coloredLine = line.split('').map(ch => {
-      if ('╔╗╚╝╠╣╦╩╬═║╗╚╔╝'.includes(ch)) return cyan(ch)
+      if ('╔╗╚╝╠╣╦╩╬═║'.includes(ch)) return cyan(ch)
       if (ch === '█') return bold(red(ch))
       return ch
     }).join('')

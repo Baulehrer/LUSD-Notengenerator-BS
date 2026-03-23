@@ -12,12 +12,7 @@ export const DEFAULT_HALBJAHR_STUNDEN: Record<string, number> = {
   '13/1': 20,
 }
 
-import { join, dirname } from 'path'
-
-const ROOT_DIR = typeof Bun !== 'undefined' && process.execPath !== process.argv[1]
-  ? dirname(process.execPath)
-  : join(import.meta.dir, '..', '..')
-const CONFIG_PATH = join(ROOT_DIR, 'Input', 'einstellungen.json')
+import { CONFIG_PATH } from './paths'
 
 export function defaultEinstellungen(): Einstellungen {
   return { halbjahrStunden: { ...DEFAULT_HALBJAHR_STUNDEN }, tutorialTipps: true }

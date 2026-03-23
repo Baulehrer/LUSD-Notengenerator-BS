@@ -5,13 +5,7 @@ import { einstellungenScreen } from './screens/einstellungen'
 import { tutorialScreen } from './screens/tutorial'
 import { showIntro } from './intro'
 import { ladeEinstellungen } from '../config/einstellungen'
-import { join, dirname } from 'path'
-
-// Compiled binary: use exe directory. Dev: use import.meta.dir/../..
-const ROOT_DIR = typeof Bun !== 'undefined' && process.execPath !== process.argv[1]
-  ? dirname(process.execPath)
-  : join(import.meta.dir, '..', '..')
-const DATA_FILE = join(ROOT_DIR, 'Input', 'BS_Schulformen_Berufe_Lernfelder.xlsx')
+import { DATA_FILE } from '../config/paths'
 
 export async function main() {
   await showIntro()

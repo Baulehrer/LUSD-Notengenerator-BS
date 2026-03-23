@@ -84,4 +84,6 @@ export interface EinzelfallDraft {
   currentStep: EinzelfallStep
   berufName: string | null
   halbjahre: string[]
+  lfStundenOverrides?: Record<string, number>
+  halbjahrStundenOverrides?: Record<string, number>
 }
