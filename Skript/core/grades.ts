@@ -31,12 +31,12 @@ export function parseNote(value: string | null | undefined): number | null {
   return null
 }
 
-export function calculateBBUNote(schueler: Schueler, beruf: Beruf): { note: number; gewichtung: number; stunden: number } {
+export function calculateBBUNote(schueler: Schueler, beruf: Beruf, lfStundenOverrides?: Map<string, number>): { note: number; gewichtung: number; stunden: number } {
   let totalGewichtung = 0
   let totalStunden = 0
 
   for (const lfId of LERNFELDER) {
-    const stunden = beruf.lernfelder.get(lfId) ?? 0
+    const stunden = lfStundenOverrides?.get(lfId) ?? beruf.lernfelder.get(lfId) ?? 0
     if (stunden === 0) continue
 
     const notenListe = schueler.noten.lernfelder.get(lfId) || []
@@ -100,9 +100,10 @@ export function calculateSchuelerNoten(
   schueler: Schueler,
   beruf: Beruf,
   halbjahre: string[],
-  halbjahrStunden?: Record<string, number>
+  halbjahrStunden?: Record<string, number>,
+  lfStundenOverrides?: Map<string, number>
 ): Berechnungsergebnis {
-  const bbuResult = calculateBBUNote(schueler, beruf)
+  const bbuResult = calculateBBUNote(schueler, beruf, lfStundenOverrides)
 
   const allgFaecherResults = new Map<string, { note: number; gewichtung: number; stunden: number }>()
   for (const fach of ALLGEMEINE_FAECHER) {

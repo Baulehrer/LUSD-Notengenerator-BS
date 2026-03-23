@@ -11,10 +11,7 @@ import { loadEinzelfallDrafts, saveEinzefallDraft, deleteEinzefallDraft } from '
 import { STEP_TIPS } from '../tips'
 import { promptNoteScale } from '../note-scale'
 import type { Beruf } from '../../types'
-
-const ROOT_DIR = typeof Bun !== 'undefined' && process.execPath !== process.argv[1]
-  ? path.dirname(process.execPath)
-  : path.join(import.meta.dir, '..', '..', '..')
+import { OUTPUT_DIR } from '../../config/paths'
 
 const LERNFELDER = ['LF01', 'LF02', 'LF03', 'LF04', 'LF05', 'LF06', 'LF07', 'LF08', 'LF09', 'LF10', 'LF11', 'LF12', 'LF13', 'LF14', 'LF15', 'LF16', 'LF17', 'LF18'] as const
 const ALLGEMEINE_FAECHER = ['D', 'POWI', 'RKA', 'SPO', 'ENG'] as const
@@ -70,6 +67,8 @@ interface SessionState {
   lastNote: number | null
   undoStack: UndoStack
   isDirty: boolean
+  lfStundenOverrides: Map<string, number>
+  halbjahrStundenOverrides: Record<string, number>
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -170,6 +169,8 @@ function createDraft(state: SessionState): EinzelfallDraft {
     currentStep: state.currentStep === 'done' ? 'name' : state.currentStep,
     berufName: state.berufName,
     halbjahre: state.halbjahre,
+    lfStundenOverrides: Object.fromEntries(state.lfStundenOverrides),
+    halbjahrStundenOverrides: state.halbjahrStundenOverrides,
   }
 }
 
@@ -251,11 +252,13 @@ function showPreviewScreen(
   const berufData = berufeLoader.getBeruf(berufName)
   if (berufData) {
     const relevanteLFs = getRelevanteLernfelder(berufData, state.schueler.stufeSemester ?? '13/1')
-    for (const { lf, stunden } of relevanteLFs) {
+    for (const { lf, stunden: origStunden } of relevanteLFs) {
+      const displayStunden = state.lfStundenOverrides.get(lf) ?? origStunden
+      const isOverridden = state.lfStundenOverrides.has(lf)
       const eintraege = state.schueler.noten?.lernfelder?.get(lf) ?? []
       const note = [...eintraege].reverse().find(n => n.note !== null)?.note ?? '–'
-      const punkte = typeof note === 'number' ? ` → ${note * stunden} Pkt.` : ''
-      lines.push(`  ${lf} (${stunden}h): ${note}${punkte}`)
+      const punkte = typeof note === 'number' ? ` → ${note * displayStunden} Pkt.` : ''
+      lines.push(`  ${lf} (${displayStunden}h${isOverridden ? '*' : ''}): ${note}${punkte}`)
     }
   }
 
@@ -351,7 +354,7 @@ async function handlePDFExport(
   const now = new Date()
   const dateStr = `${now.getFullYear()}_${String(now.getMonth() + 1).padStart(2, '0')}_${String(now.getDate()).padStart(2, '0')}`
   const filename = `${dateStr}_${schueler.klasse}_${schueler.nachname}.pdf`
-  const outputDir = path.join(ROOT_DIR, 'Output')
+  const outputDir = OUTPUT_DIR
   const outputPath = path.join(outputDir, filename)
 
   if (!fs.existsSync(outputDir)) {
@@ -502,7 +505,7 @@ async function stepLernfelder(
     const currentNote = [...currentEintraege].reverse().find(n => n.note !== null)?.note ?? null
     const initialNote = currentNote ?? state.lastNote ?? 3
 
-    const result = await promptNoteScale(`${lf} (${stunden}h)`, initialNote)
+    const result = await promptNoteScale(`${lf} (${stunden}h)`, initialNote, { current: i + 1, total: relevanteLFs.length })
 
     if (result.action === 'back') {
       if (i === 0) return 'beruf'
@@ -562,7 +565,7 @@ async function stepAllgFaecher(
     const currentNote = currentNoten[hjIndex]?.note ?? null
     const initialNote = currentNote ?? state.lastNote ?? 3
 
-    const result = await promptNoteScale(`${fachName} in ${hj} (${stunden}h)`, initialNote)
+    const result = await promptNoteScale(`${fachName} in ${hj} (${stunden}h)`, initialNote, { current: idx + 1, total: entries.length })
 
     if (result.action === 'back') {
       if (idx === 0) return 'lernfelder'
@@ -589,6 +592,70 @@ async function stepAllgFaecher(
   return 'preview'
 }
 
+// ── Stunden-Edit ────────────────────────────────────────────────────────────
+
+async function editStunden(
+  state: SessionState,
+  beruf: Beruf,
+  halbjahrStunden: Record<string, number>
+): Promise<boolean> {
+  const choice = await p.select({
+    message: 'Welche Stunden bearbeiten?',
+    options: [
+      { value: 'lf', label: 'Lernfeld-Stunden (BBU)' },
+      { value: 'hj', label: 'Halbjahr-Stunden (allg. Fächer)' },
+      { value: 'back', label: '← Zurück' },
+    ]
+  })
+  if (p.isCancel(choice) || choice === 'back') return false
+
+  if (choice === 'lf') {
+    const relevante = getRelevanteLernfelder(beruf, state.schueler.stufeSemester ?? '13/1')
+    for (const { lf, stunden } of relevante) {
+      const currentOverride = state.lfStundenOverrides.get(lf)
+      const input = await p.text({
+        message: `${lf} Stunden`,
+        initialValue: String(currentOverride ?? stunden),
+        validate: v => { const n = parseInt(v?.trim() ?? '', 10); if (isNaN(n) || n < 0) return 'Zahl >= 0 erforderlich' }
+      })
+      if (p.isCancel(input)) return false
+      const val = parseInt((input as string).trim(), 10)
+      if (val !== stunden) {
+        state.lfStundenOverrides.set(lf, val)
+      } else {
+        state.lfStundenOverrides.delete(lf)
+      }
+    }
+    state.isDirty = true
+    persistDraft(state)
+    return true
+  }
+
+  if (choice === 'hj') {
+    for (const hj of state.halbjahre) {
+      const defaultStunden = halbjahrStunden[hj] ?? 0
+      const currentOverride = state.halbjahrStundenOverrides[hj]
+      const input = await p.text({
+        message: `${hj} Stunden`,
+        initialValue: String(currentOverride ?? defaultStunden),
+        validate: v => { const n = parseInt(v?.trim() ?? '', 10); if (isNaN(n) || n < 0) return 'Zahl >= 0 erforderlich' }
+      })
+      if (p.isCancel(input)) return false
+      const val = parseInt((input as string).trim(), 10)
+      if (val !== defaultStunden) {
+        state.halbjahrStundenOverrides[hj] = val
+      } else {
+        delete state.halbjahrStundenOverrides[hj]
+      }
+    }
+    state.isDirty = true
+    persistDraft(state)
+    return true
+  }
+
+  return false
+}
+
 async function stepPreview(
   state: SessionState,
   berufeLoader: BerufeLoader,
@@ -600,7 +667,7 @@ async function stepPreview(
   if (!berufData) return 'beruf'
 
   const schueler = buildSchueler(state)
-  const ergebnis = calculateSchuelerNoten(schueler, berufData, state.halbjahre, halbjahrStunden)
+  const ergebnis = calculateSchuelerNoten(schueler, berufData, state.halbjahre, { ...halbjahrStunden, ...state.halbjahrStundenOverrides }, state.lfStundenOverrides)
 
   const warnings = validateSchuelerData(state, state.berufName, berufeLoader)
   if (warnings.length > 0) {
@@ -615,6 +682,7 @@ async function stepPreview(
     { value: 'edit_allg', label: '📝 Allg. Fächer-Noten ändern' },
     { value: 'edit_data', label: '✏️  Schüler-Daten ändern' },
     { value: 'edit_beruf', label: '🎓 Beruf ändern' },
+    { value: 'edit_stunden', label: '⏱️  Stunden bearbeiten', },
     { value: 'cancel', label: '✕ Abbrechen' },
   ]
 
@@ -628,6 +696,11 @@ async function stepPreview(
   if (action === 'edit_data') {
     const edited = await editStudentData(state)
     return edited ? 'preview' : 'preview'
+  }
+  if (action === 'edit_stunden') {
+    const berufData = berufeLoader.getBeruf(state.berufName!)!
+    await editStunden(state, berufData, halbjahrStunden)
+    return 'preview'
   }
 
   return 'ergebnis'
@@ -718,7 +791,7 @@ async function stepErgebnis(
   if (!berufData) return 'beruf'
 
   const schueler = buildSchueler(state)
-  const ergebnis = calculateSchuelerNoten(schueler, berufData, state.halbjahre, halbjahrStunden)
+  const ergebnis = calculateSchuelerNoten(schueler, berufData, state.halbjahre, { ...halbjahrStunden, ...state.halbjahrStundenOverrides }, state.lfStundenOverrides)
 
   console.clear()
   p.intro('📊 Berechnungsergebnis')
@@ -793,6 +866,7 @@ async function stepErgebnis(
   }
   options.push(
     { value: 'edit_data', label: '✏️  Schüler-Daten ändern' },
+    { value: 'edit_stunden', label: '⏱️  Stunden bearbeiten' },
     { value: 'beruf', label: '🎓 Beruf ändern' },
     { value: 'back', label: '← Zurück zur Vorschau' },
   )
@@ -817,6 +891,11 @@ async function stepErgebnis(
 
   if (action === 'edit_data') {
     await editStudentData(state)
+    return 'ergebnis'
+  }
+
+  if (action === 'edit_stunden') {
+    await editStunden(state, berufData, halbjahrStunden)
     return 'ergebnis'
   }
 
@@ -938,6 +1017,8 @@ function resumeDraft(draft: EinzelfallDraft): SessionState {
     lastNote: draft.lastNote,
     undoStack: new UndoStack(),
     isDirty: false,
+    lfStundenOverrides: new Map(Object.entries(draft.lfStundenOverrides ?? {})),
+    halbjahrStundenOverrides: { ...(draft.halbjahrStundenOverrides ?? {}) },
   }
 }
 
@@ -1063,6 +1144,8 @@ export async function einzelfallBerechnung(berufeLoader: BerufeLoader, einstellu
     lastNote: null,
     undoStack: new UndoStack(),
     isDirty: false,
+    lfStundenOverrides: new Map(),
+    halbjahrStundenOverrides: {},
   }
 
   return runStateMachine(state, berufeLoader, einstellungen)
