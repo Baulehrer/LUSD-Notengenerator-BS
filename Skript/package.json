@@ -20,7 +20,11 @@
   },
   "dependencies": {
     "@clack/prompts": "^1.1.0",
+    "@types/react": "19",
+    "@types/react-dom": "19",
     "pdfkit": "^0.17.2",
+    "react": "19",
+    "react-dom": "19",
     "xlsx": "^0.18.5"
   }
 }
