@@ -6,12 +6,17 @@
   "private": true,
   "scripts": {
     "start": "bun run main.ts",
-    "test": "bun test"
+    "dev": "bun --hot main.ts",
+    "test": "bun test",
+    "typecheck": "bunx tsc --noEmit",
+    "lint": "bunx biome check .",
+    "format": "bunx biome format --write ."
   },
   "bin": {
     "lusd-notengenerator": "main.ts"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.4.10",
     "@types/bun": "latest",
     "@types/pdfkit": "^0.17.5"
   },
