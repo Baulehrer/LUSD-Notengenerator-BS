@@ -1,26 +1,12 @@
+import { fachStunden, DEFAULT_FACH_STUNDEN } from '../shared/constants'
+import { CONFIG_PATH } from './paths'
+
 export interface Einstellungen {
   halbjahrStunden: Record<string, Record<string, number>>
   tutorialTipps: boolean
 }
 
-const FAECHER = ['D', 'POWI', 'RKA', 'SPO', 'ENG'] as const
-
-function fachStunden(std: number): Record<string, number> {
-  const r: Record<string, number> = {}
-  for (const f of FAECHER) r[f] = std
-  return r
-}
-
-export const DEFAULT_HALBJAHR_STUNDEN: Record<string, Record<string, number>> = {
-  '10/2': fachStunden(40),
-  '11/1': fachStunden(20),
-  '11/2': fachStunden(20),
-  '12/1': fachStunden(20),
-  '12/2': fachStunden(20),
-  '13/1': fachStunden(20),
-}
-
-import { CONFIG_PATH } from './paths'
+export const DEFAULT_HALBJAHR_STUNDEN: Record<string, Record<string, number>> = DEFAULT_FACH_STUNDEN
 
 export function defaultEinstellungen(): Einstellungen {
   return { halbjahrStunden: structuredClone(DEFAULT_HALBJAHR_STUNDEN), tutorialTipps: true }

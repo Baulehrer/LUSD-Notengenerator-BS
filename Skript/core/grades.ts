@@ -1,33 +1,16 @@
-import type { Schueler, Berechnungsergebnis, Beruf, LernfeldId, AllgemeinesFach, NoteEintrag } from '../types'
+import type { Schueler, Berechnungsergebnis, Beruf, NoteEintrag } from '../types'
+import {
+  LERNFELDER,
+  ALLGEMEINE_FAECHER,
+  DEFAULT_FACH_STUNDEN,
+  ALLE_HALBJAHRE,
+} from '../shared/constants'
 
-const HALBJAHRE_STUNDEN: Record<string, number> = {
-  '10/1': 0,
-  '10/2': 40,
-  '11/1': 20,
-  '11/2': 20,
-  '12/1': 20,
-  '12/2': 20,
-  '13/1': 20,
-}
-
-function fachStunden(std: number): Record<string, number> {
-  const r: Record<string, number> = {}
-  for (const f of ['D', 'POWI', 'RKA', 'SPO', 'ENG']) r[f] = std
-  return r
-}
-
-const DEFAULT_FACH_STUNDEN: Record<string, Record<string, number>> = {
-  '10/1': fachStunden(0),
-  '10/2': fachStunden(40),
-  '11/1': fachStunden(20),
-  '11/2': fachStunden(20),
-  '12/1': fachStunden(20),
-  '12/2': fachStunden(20),
-  '13/1': fachStunden(20),
-}
-
-const ALLGEMEINE_FAECHER: AllgemeinesFach[] = ['D', 'POWI', 'RKA', 'SPO', 'ENG']
-const LERNFELDER: LernfeldId[] = ['LF01', 'LF02', 'LF03', 'LF04', 'LF05', 'LF06', 'LF07', 'LF08', 'LF09', 'LF10', 'LF11', 'LF12', 'LF13', 'LF14', 'LF15', 'LF16', 'LF17', 'LF18']
+// Flat fallback (nur für Standalone-Aufrufe von calculateAllgemeinesFach aus Tests):
+// pro Halbjahr der Default-Wert des Fachs "D".
+const DEFAULT_FLAT_STUNDEN: Record<string, number> = Object.fromEntries(
+  ALLE_HALBJAHRE.map(hj => [hj, DEFAULT_FACH_STUNDEN[hj]?.D ?? 0])
+)
 
 export function roundNote(note: number): number {
   return Math.round(note * 10) / 10
@@ -76,7 +59,7 @@ export function calculateAllgemeinesFach(
   halbjahre: string[],
   halbjahrStunden?: Record<string, number>
 ): { note: number; gewichtung: number; stunden: number } {
-  const stundenMap = halbjahrStunden ?? HALBJAHRE_STUNDEN
+  const stundenMap = halbjahrStunden ?? DEFAULT_FLAT_STUNDEN
   let totalGewichtung = 0
   let totalStunden = 0
 

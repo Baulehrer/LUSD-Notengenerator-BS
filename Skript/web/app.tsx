@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { createRoot } from 'react-dom/client'
 import { Header } from './components/Header'
 import { LernfelderGrid } from './components/LernfelderGrid'
@@ -7,17 +7,9 @@ import { Einstellungen } from './components/Einstellungen'
 import { useTheme } from './hooks/useTheme'
 import { useSchueler } from './hooks/useSchueler'
 import { getEinstellungen } from './lib/api'
-import { FAECHER } from './lib/constants'
+import { DEFAULT_FACH_STUNDEN } from '../shared/constants'
 
-function fachStd(std: number): Record<string, number> {
-  const r: Record<string, number> = {}
-  for (const f of FAECHER) r[f] = std
-  return r
-}
-const DEFAULT_STUNDEN: Record<string, Record<string, number>> = {
-  '10/2': fachStd(40), '11/1': fachStd(20), '11/2': fachStd(20),
-  '12/1': fachStd(20), '12/2': fachStd(20), '13/1': fachStd(20)
-}
+const DEFAULT_STUNDEN: Record<string, Record<string, number>> = structuredClone(DEFAULT_FACH_STUNDEN)
 
 function App() {
   const { theme, setTheme } = useTheme()

@@ -1,8 +1,7 @@
 import * as p from '@clack/prompts'
 import type { Einstellungen } from '../../config/einstellungen'
 import { DEFAULT_HALBJAHR_STUNDEN, defaultEinstellungen, speichereEinstellungen } from '../../config/einstellungen'
-
-const ALL_HJ = ['10/2', '11/1', '11/2', '12/1', '12/2', '13/1']
+import { ALLE_HALBJAHRE as ALL_HJ } from '../../shared/constants'
 
 export async function einstellungenScreen(einstellungen: Einstellungen): Promise<void> {
   while (true) {

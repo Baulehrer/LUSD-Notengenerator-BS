@@ -1,4 +1,3 @@
-import React from 'react'
 import { BerufSearch } from './BerufSearch'
 import { ThemeToggle } from './ThemeToggle'
 import type { ThemeId } from '../hooks/useTheme'
