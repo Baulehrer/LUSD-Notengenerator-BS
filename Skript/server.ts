@@ -109,22 +109,6 @@ export async function startServer(port = 3000) {
         },
       },
 
-      '/api/calculate': {
-        POST: async req => {
-          try {
-            const body = (await req.json()) as Record<string, unknown>
-            const { schueler, beruf, halbjahre, halbjahrStunden, lfStundenOverrides } = parseSchuelerFromBody(body)
-            const ergebnis = calculateSchuelerNoten(schueler, beruf, halbjahre, halbjahrStunden, lfStundenOverrides)
-            return new Response(JSON.stringify(ergebnis, jsonReplacer), {
-              headers: { 'Content-Type': 'application/json' },
-            })
-          } catch (e: unknown) {
-            const msg = e instanceof Error ? e.message : String(e)
-            return Response.json({ error: msg }, { status: 400 })
-          }
-        },
-      },
-
       '/api/pdf': {
         POST: async req => {
           try {

@@ -1,6 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
+import { calculateSchuelerNoten } from '../../core/grades'
 import { ALLE_HALBJAHRE, ALLGEMEINE_FAECHER, HALBJAHR_MAP, LERNFELDER, STUNDEN_GRENZEN } from '../../shared/constants'
-import { calculate, getBeruf } from '../lib/api'
+import type { Beruf, NoteEintrag, Schueler } from '../../types'
+import { getBeruf } from '../lib/api'
 
 export interface BerufData {
   name: string
@@ -37,7 +39,6 @@ export function useSchueler(halbjahrStunden: Record<string, Record<string, numbe
   })
   const [lfStundenOverrides, setLfStundenOverrides] = useState<Record<string, number>>({})
   const [ergebnis, setErgebnis] = useState<Ergebnis | null>(null)
-  const calcTimeout = useRef<ReturnType<typeof setTimeout>>(null)
 
   const halbjahre: string[] = [...(HALBJAHR_MAP[anzahlHalbjahre - 1] ?? HALBJAHR_MAP[6]!)]
   const semester = halbjahre[halbjahre.length - 1] || '10/2'
@@ -87,37 +88,61 @@ export function useSchueler(halbjahrStunden: Record<string, Record<string, numbe
     setLfStundenOverrides(prev => ({ ...prev, [lf]: stunden }))
   }, [])
 
-  // Live calculation
+  // Live calculation (client-side, synchron)
   useEffect(() => {
     if (!berufData || !berufName) {
       setErgebnis(null)
       return
     }
 
-    if (calcTimeout.current) clearTimeout(calcTimeout.current)
-    calcTimeout.current = setTimeout(async () => {
-      try {
-        const result = (await calculate({
-          nachname,
-          vorname,
-          klasse,
-          berufName,
-          halbjahre,
-          semester,
-          austritt,
-          lernfelderNoten,
-          allgFaecherNoten,
-          halbjahrStunden,
-          lfStundenOverrides: Object.keys(lfStundenOverrides).length > 0 ? lfStundenOverrides : undefined,
-        })) as Ergebnis
-        setErgebnis(result)
-      } catch {
-        setErgebnis(null)
+    try {
+      const lfNoten = new Map<string, NoteEintrag[]>()
+      for (const [lf, note] of Object.entries(lernfelderNoten)) {
+        lfNoten.set(lf, [{ note: note && note > 0 ? note : null, lehrer: '' }])
       }
-    }, 150)
+      const allgNoten = new Map<string, NoteEintrag[]>()
+      for (const [fach, noten] of Object.entries(allgFaecherNoten)) {
+        allgNoten.set(
+          fach,
+          noten.map(n => ({ note: n && n > 0 ? n : null, lehrer: '' })),
+        )
+      }
+      const schueler: Schueler = {
+        nachname,
+        vorname,
+        klasse,
+        beruf: berufName,
+        stufeSemester: semester,
+        halbjahre,
+        noten: { lernfelder: lfNoten, allgemeineFaecher: allgNoten },
+      }
+      const beruf: Beruf = {
+        name: berufData.name,
+        lernfelder: new Map(Object.entries(berufData.lernfelder)),
+      }
+      const lfOverrides =
+        Object.keys(lfStundenOverrides).length > 0
+          ? new Map(Object.entries(lfStundenOverrides).map(([k, v]) => [k, Number(v)]))
+          : undefined
 
-    return () => {
-      if (calcTimeout.current) clearTimeout(calcTimeout.current)
+      const result = calculateSchuelerNoten(schueler, beruf, halbjahre, halbjahrStunden, lfOverrides)
+      const allgFaecherNotenObj: Record<string, { note: number; noteGerundet: number }> = {}
+      for (const [fach, val] of result.allgemeineFaecherNoten) {
+        allgFaecherNotenObj[fach] = val
+      }
+      setErgebnis({
+        bbuNote: result.bbuNote,
+        bbuNoteGerundet: result.bbuNoteGerundet,
+        gesamtnote: result.gesamtnote,
+        gesamtnoteGerundet: result.gesamtnoteGerundet,
+        stundenBBU: result.stundenBBU,
+        stundenAllg: result.stundenAllg,
+        gewichtungBBU: result.gewichtungBBU,
+        gewichtungAllg: result.gewichtungAllg,
+        allgemeineFaecherNoten: allgFaecherNotenObj,
+      })
+    } catch {
+      setErgebnis(null)
     }
   }, [
     nachname,

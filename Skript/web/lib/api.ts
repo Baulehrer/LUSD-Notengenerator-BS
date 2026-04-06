@@ -11,19 +11,6 @@ export async function getBeruf(name: string): Promise<{ name: string; lernfelder
   return res.json()
 }
 
-export async function calculate(data: unknown): Promise<unknown> {
-  const res = await fetch(`${BASE}/api/calculate`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
-  })
-  if (!res.ok) {
-    const err = (await res.json()) as { error: string }
-    throw new Error(err.error)
-  }
-  return res.json()
-}
-
 export async function generatePdf(data: unknown): Promise<Blob> {
   const res = await fetch(`${BASE}/api/pdf`, {
     method: 'POST',
