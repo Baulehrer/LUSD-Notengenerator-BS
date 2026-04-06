@@ -1,16 +1,12 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { getBeruf, calculate } from '../lib/api'
-
-const ALLE_HALBJAHRE = ['10/2', '11/1', '11/2', '12/1', '12/2', '13/1']
-const ALLGEMEINE_FAECHER = ['D', 'POWI', 'RKA', 'SPO', 'ENG'] as const
-const LERNFELDER = ['LF01','LF02','LF03','LF04','LF05','LF06','LF07','LF08','LF09','LF10','LF11','LF12','LF13','LF14','LF15','LF16','LF17','LF18'] as const
-
-// 1. AJ = 10/2 (zählt doppelt), 2. AJ = 11/1+11/2, 3. AJ = 12/1+12/2
-const STUNDEN_GRENZEN: Record<string, number> = {
-  '10/2': 320, '11/1': 320,
-  '11/2': 600, '12/1': 600,
-  '12/2': 880, '13/1': 880,
-}
+import {
+  ALLE_HALBJAHRE,
+  ALLGEMEINE_FAECHER,
+  LERNFELDER,
+  HALBJAHR_MAP,
+  STUNDEN_GRENZEN,
+} from '../../shared/constants'
 
 export interface BerufData {
   name: string
@@ -49,17 +45,7 @@ export function useSchueler(halbjahrStunden: Record<string, Record<string, numbe
   const [ergebnis, setErgebnis] = useState<Ergebnis | null>(null)
   const calcTimeout = useRef<ReturnType<typeof setTimeout>>(null)
 
-  // 10/2 zählt doppelt (10/1 hat keine Noten → 10/2 = komplettes 1. AJ)
-  const HALBJAHR_MAP: string[][] = [
-    ['10/2'],
-    ['10/2'],
-    ['10/2', '11/1'],
-    ['10/2', '11/1', '11/2'],
-    ['10/2', '11/1', '11/2', '12/1'],
-    ['10/2', '11/1', '11/2', '12/1', '12/2'],
-    ['10/2', '11/1', '11/2', '12/1', '12/2', '13/1'],
-  ]
-  const halbjahre = HALBJAHR_MAP[anzahlHalbjahre - 1] ?? HALBJAHR_MAP[6]!
+  const halbjahre: string[] = [...(HALBJAHR_MAP[anzahlHalbjahre - 1] ?? HALBJAHR_MAP[6]!)]
   const semester = halbjahre[halbjahre.length - 1] || '10/2'
 
   const getRelevanteLernfelder = useCallback(() => {
@@ -186,8 +172,8 @@ export function useSchueler(halbjahrStunden: Record<string, Record<string, numbe
     getRequestBody,
     loadFromVorlage,
     reset,
-    ALLE_HALBJAHRE,
-    ALLGEMEINE_FAECHER,
-    LERNFELDER,
+    ALLE_HALBJAHRE: [...ALLE_HALBJAHRE] as string[],
+    ALLGEMEINE_FAECHER: [...ALLGEMEINE_FAECHER] as string[],
+    LERNFELDER: [...LERNFELDER] as string[],
   }
 }

@@ -12,18 +12,12 @@ import { STEP_TIPS } from '../tips'
 import { promptNoteScale } from '../note-scale'
 import type { Beruf } from '../../types'
 import { OUTPUT_DIR } from '../../config/paths'
-
-const LERNFELDER = ['LF01', 'LF02', 'LF03', 'LF04', 'LF05', 'LF06', 'LF07', 'LF08', 'LF09', 'LF10', 'LF11', 'LF12', 'LF13', 'LF14', 'LF15', 'LF16', 'LF17', 'LF18'] as const
-const ALLGEMEINE_FAECHER = ['D', 'POWI', 'RKA', 'SPO', 'ENG'] as const
-const ALL_HJ = ['10/2', '11/1', '11/2', '12/1', '12/2', '13/1']
-
-const FACH_NAMEN: Record<string, string> = {
-  D: 'Deutsch',
-  POWI: 'Politik & Wirtschaft',
-  RKA: 'Religion',
-  SPO: 'Sport',
-  ENG: 'Englisch'
-}
+import {
+  LERNFELDER,
+  ALLGEMEINE_FAECHER,
+  ALLE_HALBJAHRE as ALL_HJ,
+  FACH_LABELS as FACH_NAMEN,
+} from '../../shared/constants'
 
 // ── Undo ─────────────────────────────────────────────────────────────────────
 

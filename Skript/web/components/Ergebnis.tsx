@@ -1,4 +1,3 @@
-import React from 'react'
 import type { Ergebnis as ErgebnisType } from '../hooks/useSchueler'
 
 interface Props {

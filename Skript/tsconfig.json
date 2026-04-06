@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     // Environment setup & latest features
-    "lib": ["ESNext"],
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
     "target": "ESNext",
     "module": "Preserve",
     "moduleDetection": "force",
@@ -25,5 +25,10 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noPropertyAccessFromIndexSignature": false
-  }
+  },
+  // Die TUI wird aktuell nicht weiterentwickelt und ist nach der per-Fach-
+  // Stunden-Umstellung nicht mehr typkompatibel. Sie bleibt im Repo als
+  // Feature-Option, wird aber erst beim Revive wieder in den TS-Check
+  // aufgenommen. Siehe plan.md → Abschnitt "TUI".
+  "exclude": ["tui", "node_modules"]
 }

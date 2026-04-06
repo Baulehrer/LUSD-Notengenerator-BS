@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react'
+import { useMemo } from 'react'
 import { NoteInput } from './NoteInput'
 import { Ergebnis } from './Ergebnis'
 import { AUSBILDUNGSJAHRE, FACH_LABELS } from '../lib/constants'

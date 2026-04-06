@@ -1,4 +1,3 @@
-import React from 'react'
 import { THEMES, type ThemeId } from '../hooks/useTheme'
 
 interface Props {
