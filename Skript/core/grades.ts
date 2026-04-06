@@ -10,6 +10,22 @@ const HALBJAHRE_STUNDEN: Record<string, number> = {
   '13/1': 20,
 }
 
+function fachStunden(std: number): Record<string, number> {
+  const r: Record<string, number> = {}
+  for (const f of ['D', 'POWI', 'RKA', 'SPO', 'ENG']) r[f] = std
+  return r
+}
+
+const DEFAULT_FACH_STUNDEN: Record<string, Record<string, number>> = {
+  '10/1': fachStunden(0),
+  '10/2': fachStunden(40),
+  '11/1': fachStunden(20),
+  '11/2': fachStunden(20),
+  '12/1': fachStunden(20),
+  '12/2': fachStunden(20),
+  '13/1': fachStunden(20),
+}
+
 const ALLGEMEINE_FAECHER: AllgemeinesFach[] = ['D', 'POWI', 'RKA', 'SPO', 'ENG']
 const LERNFELDER: LernfeldId[] = ['LF01', 'LF02', 'LF03', 'LF04', 'LF05', 'LF06', 'LF07', 'LF08', 'LF09', 'LF10', 'LF11', 'LF12', 'LF13', 'LF14', 'LF15', 'LF16', 'LF17', 'LF18']
 
@@ -100,15 +116,21 @@ export function calculateSchuelerNoten(
   schueler: Schueler,
   beruf: Beruf,
   halbjahre: string[],
-  halbjahrStunden?: Record<string, number>,
+  halbjahrStunden?: Record<string, Record<string, number>>,
   lfStundenOverrides?: Map<string, number>
 ): Berechnungsergebnis {
   const bbuResult = calculateBBUNote(schueler, beruf, lfStundenOverrides)
+  const stundenMap = halbjahrStunden ?? DEFAULT_FACH_STUNDEN
 
   const allgFaecherResults = new Map<string, { note: number; gewichtung: number; stunden: number }>()
   for (const fach of ALLGEMEINE_FAECHER) {
+    // Extract per-halbjahr stunden for this specific fach
+    const fachStd: Record<string, number> = {}
+    for (const hj of Object.keys(stundenMap)) {
+      fachStd[hj] = stundenMap[hj]?.[fach] ?? 0
+    }
     const notenListe = schueler.noten.allgemeineFaecher.get(fach) || []
-    allgFaecherResults.set(fach, calculateAllgemeinesFach(notenListe, halbjahre, halbjahrStunden))
+    allgFaecherResults.set(fach, calculateAllgemeinesFach(notenListe, halbjahre, fachStd))
   }
 
   const gesamtnote = calculateGesamtnote(bbuResult, allgFaecherResults)

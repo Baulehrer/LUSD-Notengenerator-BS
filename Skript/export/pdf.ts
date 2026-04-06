@@ -18,7 +18,7 @@ function floorTwo(x: number): number {
 export async function generatePDF(
   ergebnisse: Berechnungsergebnis[],
   outputPath: string,
-  options?: { beruf?: Beruf; halbjahre?: string[]; halbjahrStunden?: Record<string, number> }
+  options?: { beruf?: Beruf; halbjahre?: string[]; halbjahrStunden?: Record<string, Record<string, number>> }
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({
@@ -71,7 +71,9 @@ function renderBBUHorizontal(
   // Collect active LF rows
   type LFRow = { lf: string; stunden: number; note: number }
   const rows: LFRow[] = []
-  for (const [lf, eintraege] of schueler.noten.lernfelder) {
+  // Sort LF entries by key (LF01, LF02, ...) instead of Map insertion order
+  const sortedLfEntries = [...schueler.noten.lernfelder.entries()].sort((a, b) => a[0].localeCompare(b[0]))
+  for (const [lf, eintraege] of sortedLfEntries) {
     const stunden = berufData?.lernfelder.get(lf) ?? 0
     if (stunden === 0) continue
     const latest = [...eintraege].reverse().find(n => n.note !== null && n.note! > 0)
@@ -130,7 +132,7 @@ function renderAllgFaecherHorizontal(
   y: number,
   schueler: import('../types').Schueler,
   halbjahre: string[],
-  stundenMap: Record<string, number>
+  stundenMap: Record<string, Record<string, number>>
 ): number {
   if (halbjahre.length === 0) return y
 
@@ -163,7 +165,7 @@ function renderAllgFaecherHorizontal(
     const hasNotes = eintraege.some((e, i) => {
       const hj = halbjahre[i]
       if (!hj) return false
-      const stunden = stundenMap[hj] ?? 0
+      const stunden = stundenMap[hj]?.[fach] ?? 0
       return e.note !== null && e.note !== undefined && e.note > 0 && stunden > 0
     })
     if (!hasNotes) continue
@@ -181,7 +183,7 @@ function renderAllgFaecherHorizontal(
     for (let i = 0; i < halbjahre.length; i++) {
       const hj = halbjahre[i]!
       const eintrag = eintraege[i]
-      const stunden = stundenMap[hj] ?? 0
+      const stunden = stundenMap[hj]?.[fach] ?? 0
       const note = eintrag?.note
 
       if (note !== null && note !== undefined && note > 0 && stunden > 0) {
@@ -220,7 +222,7 @@ function renderAllgFaecherHorizontal(
 function renderEinzelfall(
   doc: PDFKit.PDFDocument,
   ergebnis: Berechnungsergebnis,
-  options?: { beruf?: Beruf; halbjahre?: string[]; halbjahrStunden?: Record<string, number> }
+  options?: { beruf?: Beruf; halbjahre?: string[]; halbjahrStunden?: Record<string, Record<string, number>> }
 ): void {
   const { schueler } = ergebnis
   const berufData = options?.beruf
@@ -276,15 +278,18 @@ function renderEinzelfall(
   const totalStunden = ergebnis.stundenBBU + ergebnis.stundenAllg
   const gesamtnoteFloor2 = totalStunden > 0 ? floorTwo(totalGewichtung / totalStunden) : 0
 
-  doc.fontSize(10).font('Helvetica')
+  doc.fontSize(10).font('Helvetica').fillColor('black')
   doc.text(`BBU-Note:    ${ergebnis.bbuNoteGerundet}`, 50, y)
-  doc.text('(ganzzahlig, kaufmaennisch gerundet)', 200, y, { color: '#555555' } as any)
+  doc.fillColor('#555555').text('(ganzzahlig, kaufmaennisch gerundet)', 200, y)
+  doc.fillColor('black')
   y += 16
   doc.text(`Gesamtnote:  ${gesamtnoteFloor2.toFixed(2)}`, 50, y)
-  doc.text('(2 Nachkommastellen, nur abgerundet)', 200, y, { color: '#555555' } as any)
+  doc.fillColor('#555555').text('(2 Nachkommastellen, nur abgerundet)', 200, y)
+  doc.fillColor('black')
   y += 14
+  const gesamtRaw = totalStunden > 0 ? totalGewichtung / totalStunden : 0
   doc.fontSize(8).font('Helvetica-Oblique').fillColor('#666666')
-    .text(`Berechnung: (${totalGewichtung.toFixed(1)} Gew.) / (${totalStunden} h) = ${(totalGewichtung / totalStunden).toFixed(4)}`, 50, y)
+    .text(`Berechnung: (${totalGewichtung.toFixed(1)} Gew.) / (${totalStunden} h) = ${gesamtRaw.toFixed(4)}`, 50, y)
   doc.fillColor('black')
   y += 24
 
