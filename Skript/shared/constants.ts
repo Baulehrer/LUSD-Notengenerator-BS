@@ -1,13 +1,28 @@
 // ── Lernfelder / Fächer ──────────────────────────────────────────────────
 export const LERNFELDER = [
-  'LF01', 'LF02', 'LF03', 'LF04', 'LF05', 'LF06',
-  'LF07', 'LF08', 'LF09', 'LF10', 'LF11', 'LF12',
-  'LF13', 'LF14', 'LF15', 'LF16', 'LF17', 'LF18',
+  'LF01',
+  'LF02',
+  'LF03',
+  'LF04',
+  'LF05',
+  'LF06',
+  'LF07',
+  'LF08',
+  'LF09',
+  'LF10',
+  'LF11',
+  'LF12',
+  'LF13',
+  'LF14',
+  'LF15',
+  'LF16',
+  'LF17',
+  'LF18',
 ] as const
-export type LernfeldId = typeof LERNFELDER[number]
+export type LernfeldId = (typeof LERNFELDER)[number]
 
 export const ALLGEMEINE_FAECHER = ['D', 'POWI', 'RKA', 'SPO', 'ENG'] as const
-export type AllgemeinesFach = typeof ALLGEMEINE_FAECHER[number]
+export type AllgemeinesFach = (typeof ALLGEMEINE_FAECHER)[number]
 
 // Bewusst als Record<string, string> deklariert, damit dynamische Lookups
 // mit einem allgemeinen string-Key weiter möglich sind (Komponenten mappen
@@ -24,7 +39,7 @@ export const FACH_LABELS: Record<string, string> = {
 // 10/1 hat keine Noten. 10/2 zählt als komplettes 1. AJ (deshalb doppelte Gewichtung
 // gegenüber den anderen HJ). 2. AJ = 11/1+11/2, 3. AJ = 12/1+12/2. 13/1 ist optional.
 export const ALLE_HALBJAHRE = ['10/2', '11/1', '11/2', '12/1', '12/2', '13/1'] as const
-export type Halbjahr = typeof ALLE_HALBJAHRE[number]
+export type Halbjahr = (typeof ALLE_HALBJAHRE)[number]
 
 export const AUSBILDUNGSJAHRE = [
   { label: '1. AJ', halbjahre: ['10/2'] },

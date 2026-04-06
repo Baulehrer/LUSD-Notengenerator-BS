@@ -1,13 +1,13 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
-import { Header } from './components/Header'
-import { LernfelderGrid } from './components/LernfelderGrid'
+import { DEFAULT_FACH_STUNDEN } from '../shared/constants'
 import { AllgFaecher } from './components/AllgFaecher'
 import { Einstellungen } from './components/Einstellungen'
-import { useTheme } from './hooks/useTheme'
+import { Header } from './components/Header'
+import { LernfelderGrid } from './components/LernfelderGrid'
 import { useSchueler } from './hooks/useSchueler'
+import { useTheme } from './hooks/useTheme'
 import { getEinstellungen } from './lib/api'
-import { DEFAULT_FACH_STUNDEN } from '../shared/constants'
 
 const DEFAULT_STUNDEN: Record<string, Record<string, number>> = structuredClone(DEFAULT_FACH_STUNDEN)
 
@@ -16,21 +16,26 @@ function App() {
   const [halbjahrStunden, setHalbjahrStunden] = useState(DEFAULT_STUNDEN)
 
   useEffect(() => {
-    getEinstellungen().then(e => {
-      if (e.halbjahrStunden) setHalbjahrStunden(e.halbjahrStunden)
-    }).catch(() => {})
+    getEinstellungen()
+      .then(e => {
+        if (e.halbjahrStunden) setHalbjahrStunden(e.halbjahrStunden)
+      })
+      .catch(() => {})
   }, [])
 
   const schueler = useSchueler(halbjahrStunden)
   const relevanteLernfelder = schueler.getRelevanteLernfelder()
 
-  const handleLoadVorlage = useCallback((data: unknown) => {
-    const d = data as Record<string, unknown>
-    if (d.halbjahrStunden && typeof d.halbjahrStunden === 'object') {
-      setHalbjahrStunden(d.halbjahrStunden as Record<string, Record<string, number>>)
-    }
-    schueler.loadFromVorlage(d as Parameters<typeof schueler.loadFromVorlage>[0])
-  }, [schueler.loadFromVorlage])
+  const handleLoadVorlage = useCallback(
+    (data: unknown) => {
+      const d = data as Record<string, unknown>
+      if (d.halbjahrStunden && typeof d.halbjahrStunden === 'object') {
+        setHalbjahrStunden(d.halbjahrStunden as Record<string, Record<string, number>>)
+      }
+      schueler.loadFromVorlage(d as Parameters<typeof schueler.loadFromVorlage>[0])
+    },
+    [schueler.loadFromVorlage],
+  )
 
   return (
     <div className="app">

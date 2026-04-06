@@ -1,4 +1,5 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react'
+import type React from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { searchBerufe } from '../lib/api'
 
 interface Props {
@@ -14,46 +15,63 @@ export function BerufSearch({ value, onSelect }: Props) {
   const timer = useRef<ReturnType<typeof setTimeout>>(null)
   const containerRef = useRef<HTMLDivElement>(null)
 
-  useEffect(() => { setQuery(value) }, [value])
+  useEffect(() => {
+    setQuery(value)
+  }, [value])
 
   const doSearch = useCallback(async (q: string) => {
-    if (q.length < 1) { setResults([]); setOpen(false); return }
+    if (q.length < 1) {
+      setResults([])
+      setOpen(false)
+      return
+    }
     try {
       const res = await searchBerufe(q)
       setResults(res)
       setOpen(res.length > 0)
       setActiveIndex(0)
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }, [])
 
-  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const v = e.target.value
-    setQuery(v)
-    if (timer.current) clearTimeout(timer.current)
-    timer.current = setTimeout(() => doSearch(v), 200)
-  }, [doSearch])
+  const handleChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const v = e.target.value
+      setQuery(v)
+      if (timer.current) clearTimeout(timer.current)
+      timer.current = setTimeout(() => doSearch(v), 200)
+    },
+    [doSearch],
+  )
 
-  const handleSelect = useCallback((name: string) => {
-    setQuery(name)
-    setOpen(false)
-    onSelect(name)
-  }, [onSelect])
-
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (!open) return
-    if (e.key === 'ArrowDown') {
-      e.preventDefault()
-      setActiveIndex(i => Math.min(i + 1, results.length - 1))
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault()
-      setActiveIndex(i => Math.max(i - 1, 0))
-    } else if (e.key === 'Enter' && results[activeIndex]) {
-      e.preventDefault()
-      handleSelect(results[activeIndex])
-    } else if (e.key === 'Escape') {
+  const handleSelect = useCallback(
+    (name: string) => {
+      setQuery(name)
       setOpen(false)
-    }
-  }, [open, results, activeIndex, handleSelect])
+      onSelect(name)
+    },
+    [onSelect],
+  )
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (!open) return
+      if (e.key === 'ArrowDown') {
+        e.preventDefault()
+        setActiveIndex(i => Math.min(i + 1, results.length - 1))
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault()
+        setActiveIndex(i => Math.max(i - 1, 0))
+      } else if (e.key === 'Enter' && results[activeIndex]) {
+        e.preventDefault()
+        handleSelect(results[activeIndex])
+      } else if (e.key === 'Escape') {
+        setOpen(false)
+      }
+    },
+    [open, results, activeIndex, handleSelect],
+  )
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -68,7 +86,9 @@ export function BerufSearch({ value, onSelect }: Props) {
 
   // Clear pending debounce timer on unmount
   useEffect(() => {
-    return () => { if (timer.current) clearTimeout(timer.current) }
+    return () => {
+      if (timer.current) clearTimeout(timer.current)
+    }
   }, [])
 
   return (
@@ -78,7 +98,9 @@ export function BerufSearch({ value, onSelect }: Props) {
         value={query}
         onChange={handleChange}
         onKeyDown={handleKeyDown}
-        onFocus={() => { if (results.length > 0) setOpen(true) }}
+        onFocus={() => {
+          if (results.length > 0) setOpen(true)
+        }}
         placeholder="Beruf suchen..."
       />
       {open && (

@@ -28,9 +28,7 @@ export function Ergebnis({ ergebnis, type }: Props) {
   if (!ergebnis) {
     return (
       <div className="ergebnis-bar">
-        <span className="ergebnis-label">
-          {type === 'bbu' ? 'BBU-Note' : 'Gesamtnote'}: –
-        </span>
+        <span className="ergebnis-label">{type === 'bbu' ? 'BBU-Note' : 'Gesamtnote'}: –</span>
       </div>
     )
   }
@@ -42,21 +40,15 @@ export function Ergebnis({ ergebnis, type }: Props) {
   const noteGerundet = type === 'bbu' ? ergebnis.bbuNoteGerundet : ergebnis.gesamtnoteGerundet
   const label = type === 'bbu' ? 'BBU-Note' : 'Gesamtnote'
   const formel = formatFormel(ergebnis, type)
-  const rundungInfo = type === 'bbu'
-    ? '(ganzzahlig, kaufmännisch gerundet)'
-    : '(2 Nachkommastellen, nur abgerundet)'
+  const rundungInfo = type === 'bbu' ? '(ganzzahlig, kaufmännisch gerundet)' : '(2 Nachkommastellen, nur abgerundet)'
 
   const noteClass = noteGerundet >= 1 && noteGerundet <= 6 ? `note-${noteGerundet}` : ''
 
   return (
     <div className="ergebnis-bar">
       <span className="ergebnis-label">{label}:</span>
-      <span className={`ergebnis-note ${noteClass}`}>
-        {type === 'bbu' ? noteGerundet : note.toFixed(2)}
-      </span>
-      {noteGerundet > 0 && (
-        <span className="ergebnis-detail">{rundungInfo}</span>
-      )}
+      <span className={`ergebnis-note ${noteClass}`}>{type === 'bbu' ? noteGerundet : note.toFixed(2)}</span>
+      {noteGerundet > 0 && <span className="ergebnis-detail">{rundungInfo}</span>}
       {formel && <span className="ergebnis-formel">{formel}</span>}
     </div>
   )

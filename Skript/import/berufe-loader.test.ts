@@ -1,8 +1,8 @@
-import { test, expect, describe, beforeAll } from 'bun:test'
-import { join } from 'path'
-import { BerufeLoader } from './berufe-loader'
+import { beforeAll, describe, expect, test } from 'bun:test'
+import * as fs from 'node:fs'
+import { join } from 'node:path'
 import * as XLSX from 'xlsx'
-import * as fs from 'fs'
+import { BerufeLoader } from './berufe-loader'
 
 const ROOT_DIR = join(import.meta.dir, '..', '..')
 const DATA_FILE = join(ROOT_DIR, 'Input', 'BS_Schulformen_Berufe_Lernfelder.xlsx')
@@ -21,14 +21,14 @@ describe('BerufeLoader', () => {
       if (fs.existsSync(tempFile)) {
         fs.unlinkSync(tempFile)
       }
-      
+
       const loader = new BerufeLoader()
       await loader.load(tempFile)
-      
+
       // File should now exist
       expect(fs.existsSync(tempFile)).toBe(true)
       expect(loader.getAllBerufe().length).toBeGreaterThan(0)
-      
+
       // Cleanup
       fs.unlinkSync(tempFile)
     })

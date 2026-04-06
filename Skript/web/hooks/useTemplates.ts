@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react'
-import { getTemplates, saveTemplate, deleteTemplate, type TemplateStore } from '../lib/api'
+import { useCallback, useEffect, useState } from 'react'
+import { deleteTemplate, getTemplates, saveTemplate, type TemplateStore } from '../lib/api'
 
 export function useTemplates() {
   const [store, setStore] = useState<TemplateStore>({ stundenTemplates: [], komplettVorlagen: [] })
@@ -15,17 +15,25 @@ export function useTemplates() {
     setLoading(false)
   }, [])
 
-  useEffect(() => { refresh() }, [refresh])
-
-  const save = useCallback(async (type: 'stunden' | 'komplett', name: string, data: unknown) => {
-    await saveTemplate(type, name, data)
-    await refresh()
+  useEffect(() => {
+    refresh()
   }, [refresh])
 
-  const remove = useCallback(async (id: string) => {
-    await deleteTemplate(id)
-    await refresh()
-  }, [refresh])
+  const save = useCallback(
+    async (type: 'stunden' | 'komplett', name: string, data: unknown) => {
+      await saveTemplate(type, name, data)
+      await refresh()
+    },
+    [refresh],
+  )
+
+  const remove = useCallback(
+    async (id: string) => {
+      await deleteTemplate(id)
+      await refresh()
+    },
+    [refresh],
+  )
 
   return { store, loading, save, remove, refresh }
 }

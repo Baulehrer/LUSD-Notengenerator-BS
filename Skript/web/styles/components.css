@@ -43,7 +43,8 @@
   text-align: right;
 }
 
-.header-left input, .header-left select {
+.header-left input,
+.header-left select {
   width: 100%;
   min-width: 0;
 }
@@ -161,7 +162,7 @@
 }
 
 .progress-arrow::after {
-  content: '';
+  content: "";
   position: absolute;
   left: 50%;
   top: 24px;
@@ -194,7 +195,7 @@
 }
 
 .progress-step.active::before {
-  content: '';
+  content: "";
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
@@ -260,7 +261,10 @@
   border-radius: var(--radius-sm);
   padding: 10px 8px;
   text-align: center;
-  transition: border-color 0.2s, opacity 0.2s, box-shadow 0.2s;
+  transition:
+    border-color 0.2s,
+    opacity 0.2s,
+    box-shadow 0.2s;
 }
 
 .lf-card:focus-within {
@@ -277,7 +281,7 @@
 }
 
 .lf-card.disabled::after {
-  content: '—';
+  content: "—";
   position: absolute;
   inset: 0;
   display: flex;
@@ -601,13 +605,27 @@
 }
 
 /* ── Note Color Classes ──────────────────────────────────── */
-.note-1 { color: var(--note-1) !important; }
-.note-2 { color: var(--note-2) !important; }
-.note-3 { color: var(--note-3) !important; }
-.note-4 { color: var(--note-4) !important; }
-.note-5 { color: var(--note-5) !important; }
-.note-6 { color: var(--note-6) !important; }
-.note-0 { color: var(--note-0) !important; }
+.note-1 {
+  color: var(--note-1) !important;
+}
+.note-2 {
+  color: var(--note-2) !important;
+}
+.note-3 {
+  color: var(--note-3) !important;
+}
+.note-4 {
+  color: var(--note-4) !important;
+}
+.note-5 {
+  color: var(--note-5) !important;
+}
+.note-6 {
+  color: var(--note-6) !important;
+}
+.note-0 {
+  color: var(--note-0) !important;
+}
 
 /* ── Responsive ──────────────────────────────────────────── */
 @media (max-width: 1100px) {

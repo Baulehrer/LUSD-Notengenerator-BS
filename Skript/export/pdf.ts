@@ -1,14 +1,14 @@
 import PDFDocument from 'pdfkit'
-import type { Berechnungsergebnis, KlassenErgebnis, Beruf } from '../types'
-import { DEFAULT_HALBJAHR_STUNDEN } from '../config/einstellungen'
 import { FBS_LOGO, LUSD_LOGO } from '../assets/logos'
+import { DEFAULT_HALBJAHR_STUNDEN } from '../config/einstellungen'
+import type { Berechnungsergebnis, Beruf, KlassenErgebnis } from '../types'
 
 const FACH_NAMEN: Record<string, string> = {
   D: 'Deutsch',
   POWI: 'Politik & Wirtschaft',
   RKA: 'Religion',
   SPO: 'Sport',
-  ENG: 'Englisch'
+  ENG: 'Englisch',
 }
 
 function floorTwo(x: number): number {
@@ -18,7 +18,7 @@ function floorTwo(x: number): number {
 export async function generatePDF(
   ergebnisse: Berechnungsergebnis[],
   outputPath: string,
-  options?: { beruf?: Beruf; halbjahre?: string[]; halbjahrStunden?: Record<string, Record<string, number>> }
+  options?: { beruf?: Beruf; halbjahre?: string[]; halbjahrStunden?: Record<string, Record<string, number>> },
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({
@@ -26,8 +26,8 @@ export async function generatePDF(
       margin: 40,
       info: {
         Title: 'Einzelfallberechnung Zeugnisnoten',
-        Author: 'LUSD Notengenerator'
-      }
+        Author: 'LUSD Notengenerator',
+      },
     })
 
     const chunks: Buffer[] = []
@@ -66,7 +66,7 @@ function renderBBUHorizontal(
   doc: PDFKit.PDFDocument,
   y: number,
   schueler: import('../types').Schueler,
-  berufData: Beruf | undefined
+  berufData: Beruf | undefined,
 ): { y: number; gewichtung: number; stunden: number } {
   // Collect active LF rows
   type LFRow = { lf: string; stunden: number; note: number }
@@ -93,10 +93,16 @@ function renderBBUHorizontal(
   // Split into groups
   for (let g = 0; g * rowsPerGroup < rows.length; g++) {
     const group = rows.slice(g * rowsPerGroup, (g + 1) * rowsPerGroup)
-    if (y > 700) { doc.addPage(); y = 40 }
+    if (y > 700) {
+      doc.addPage()
+      y = 40
+    }
 
     // Row 1: LF names (header background)
-    doc.rect(startX, y, group.length * colW, 13).fillColor('#eeeeee').fill()
+    doc
+      .rect(startX, y, group.length * colW, 13)
+      .fillColor('#eeeeee')
+      .fill()
     doc.fillColor('black').fontSize(7).font('Helvetica-Bold')
     for (let i = 0; i < group.length; i++) {
       doc.text(group[i]!.lf, startX + i * colW + 2, y + 2, { width: colW - 4, lineBreak: false })
@@ -132,7 +138,7 @@ function renderAllgFaecherHorizontal(
   y: number,
   schueler: import('../types').Schueler,
   halbjahre: string[],
-  stundenMap: Record<string, Record<string, number>>
+  stundenMap: Record<string, Record<string, number>>,
 ): number {
   if (halbjahre.length === 0) return y
 
@@ -143,8 +149,10 @@ function renderAllgFaecherHorizontal(
   const vorschlagColW = 55
 
   // Header row
-  doc.rect(startX, y, fachColW + halbjahre.length * hjColW + endnoteColW + vorschlagColW, 13)
-    .fillColor('#eeeeee').fill()
+  doc
+    .rect(startX, y, fachColW + halbjahre.length * hjColW + endnoteColW + vorschlagColW, 13)
+    .fillColor('#eeeeee')
+    .fill()
   doc.fillColor('black').fontSize(7).font('Helvetica-Bold')
 
   let x = startX
@@ -170,7 +178,10 @@ function renderAllgFaecherHorizontal(
     })
     if (!hasNotes) continue
 
-    if (y > 720) { doc.addPage(); y = 40 }
+    if (y > 720) {
+      doc.addPage()
+      y = 40
+    }
 
     let fachGewichtung = 0
     let fachStunden = 0
@@ -222,7 +233,7 @@ function renderAllgFaecherHorizontal(
 function renderEinzelfall(
   doc: PDFKit.PDFDocument,
   ergebnis: Berechnungsergebnis,
-  options?: { beruf?: Beruf; halbjahre?: string[]; halbjahrStunden?: Record<string, Record<string, number>> }
+  options?: { beruf?: Beruf; halbjahre?: string[]; halbjahrStunden?: Record<string, Record<string, number>> },
 ): void {
   const { schueler } = ergebnis
   const berufData = options?.beruf
@@ -238,7 +249,9 @@ function renderEinzelfall(
   hline(doc, headerBottomY)
 
   // ── Titel ──────────────────────────────────────────────────────
-  doc.fontSize(13).font('Helvetica-Bold')
+  doc
+    .fontSize(13)
+    .font('Helvetica-Bold')
     .text('Einzelfallberechnung Zeugnisnoten', 40, headerBottomY + 8, { align: 'center', width: 515 })
 
   hline(doc, headerBottomY + 26)
@@ -261,7 +274,10 @@ function renderEinzelfall(
 
   const bbuRaw = bbuResult.stunden > 0 ? bbuResult.gewichtung / bbuResult.stunden : 0
   const bbuGerundet = Math.round(bbuRaw)
-  doc.fontSize(9).font('Helvetica-Oblique').fillColor('#333333')
+  doc
+    .fontSize(9)
+    .font('Helvetica-Oblique')
+    .fillColor('#333333')
     .text(`BBU-Note: ${bbuRaw.toFixed(2)} -> gerundet: ${bbuGerundet}`, 50, y)
   doc.fillColor('black')
   y += 18
@@ -288,7 +304,10 @@ function renderEinzelfall(
   doc.fillColor('black')
   y += 14
   const gesamtRaw = totalStunden > 0 ? totalGewichtung / totalStunden : 0
-  doc.fontSize(8).font('Helvetica-Oblique').fillColor('#666666')
+  doc
+    .fontSize(8)
+    .font('Helvetica-Oblique')
+    .fillColor('#666666')
     .text(`Berechnung: (${totalGewichtung.toFixed(1)} Gew.) / (${totalStunden} h) = ${gesamtRaw.toFixed(4)}`, 50, y)
   doc.fillColor('black')
   y += 24
@@ -309,7 +328,10 @@ function renderEinzelfall(
 
 function renderSectionHeader(doc: PDFKit.PDFDocument, y: number, title: string): number {
   doc.rect(40, y, 515, 16).fillColor('#dddddd').fill()
-  doc.fillColor('black').fontSize(9).font('Helvetica-Bold')
+  doc
+    .fillColor('black')
+    .fontSize(9)
+    .font('Helvetica-Bold')
     .text(`  ${title}`, 42, y + 3, { width: 511 })
   return y + 20
 }
@@ -321,8 +343,8 @@ export async function generateKlassenPDF(klassenErgebnis: KlassenErgebnis, outpu
       margin: 30,
       info: {
         Title: `Klassenliste - ${klassenErgebnis.klasse}`,
-        Author: 'LUSD Notengenerator'
-      }
+        Author: 'LUSD Notengenerator',
+      },
     })
 
     const chunks: Buffer[] = []
@@ -349,7 +371,7 @@ export async function generateKlassenPDF(klassenErgebnis: KlassenErgebnis, outpu
       beruf: 150,
       bbu: 50,
       gesamt: 50,
-      stddev: 80
+      stddev: 80,
     }
     let x = 30
 

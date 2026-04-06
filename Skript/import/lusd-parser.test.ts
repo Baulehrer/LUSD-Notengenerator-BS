@@ -1,18 +1,18 @@
-import { test, expect, describe } from 'bun:test'
-import { parseZeugnisFile, parseHistorieFile, combineZeugnisAndHistorie } from './lusd-parser'
+import { describe, expect, test } from 'bun:test'
+import { existsSync, unlinkSync } from 'node:fs'
 import * as XLSX from 'xlsx'
-import { existsSync, unlinkSync } from 'fs'
+import { combineZeugnisAndHistorie, parseHistorieFile, parseZeugnisFile } from './lusd-parser'
 
 // Helper to create temp Excel files
 function createTempExcel(sheets: { name: string; data: Record<string, unknown>[] }[]): string {
   const tempFile = `/tmp/test_lusd_${Date.now()}_${Math.random().toString(36).slice(2)}.xlsx`
   const wb = XLSX.utils.book_new()
-  
+
   for (const sheet of sheets) {
     const ws = XLSX.utils.json_to_sheet(sheet.data)
     XLSX.utils.book_append_sheet(wb, ws, sheet.name)
   }
-  
+
   XLSX.writeFile(wb, tempFile)
   return tempFile
 }
@@ -29,10 +29,8 @@ describe('parseZeugnisFile', () => {
   })
 
   test('throws error for missing RExcelExport sheet', () => {
-    const tempFile = createTempExcel([
-      { name: 'WrongSheet', data: [{ foo: 'bar' }] }
-    ])
-    
+    const tempFile = createTempExcel([{ name: 'WrongSheet', data: [{ foo: 'bar' }] }])
+
     try {
       expect(() => parseZeugnisFile(tempFile)).toThrow('RExcelExport')
     } finally {
@@ -42,25 +40,25 @@ describe('parseZeugnisFile', () => {
 
   test('parses zeugnis data correctly', () => {
     const tempFile = createTempExcel([
-      { 
-        name: 'RExcelExport', 
+      {
+        name: 'RExcelExport',
         data: [
-          { 
-            Schueler_Nachname: 'Mustermann', 
+          {
+            Schueler_Nachname: 'Mustermann',
             Schueler_Vorname: 'Max',
             Schueler_Schulform_kurz: 'BS',
             Schueler_Beruf: 'Fachinformatiker',
-            Schueler_StufeSemester: '11/2'
-          }
-        ] 
-      }
+            Schueler_StufeSemester: '11/2',
+          },
+        ],
+      },
     ])
-    
+
     try {
       const result = parseZeugnisFile(tempFile)
       expect(result.size).toBe(1)
       expect(result.has('Mustermann_Max')).toBe(true)
-      
+
       const schueler = result.get('Mustermann_Max')
       expect(schueler!.nachname).toBe('Mustermann')
       expect(schueler!.vorname).toBe('Max')
@@ -73,15 +71,15 @@ describe('parseZeugnisFile', () => {
 
   test('handles multiple students', () => {
     const tempFile = createTempExcel([
-      { 
-        name: 'RExcelExport', 
+      {
+        name: 'RExcelExport',
         data: [
           { Schueler_Nachname: 'A', Schueler_Vorname: 'A', Schueler_Beruf: 'Beruf1', Schueler_StufeSemester: '11/1' },
-          { Schueler_Nachname: 'B', Schueler_Vorname: 'B', Schueler_Beruf: 'Beruf2', Schueler_StufeSemester: '11/2' }
-        ] 
-      }
+          { Schueler_Nachname: 'B', Schueler_Vorname: 'B', Schueler_Beruf: 'Beruf2', Schueler_StufeSemester: '11/2' },
+        ],
+      },
     ])
-    
+
     try {
       const result = parseZeugnisFile(tempFile)
       expect(result.size).toBe(2)
@@ -94,15 +92,25 @@ describe('parseZeugnisFile', () => {
 
   test('overwrites duplicate keys', () => {
     const tempFile = createTempExcel([
-      { 
-        name: 'RExcelExport', 
+      {
+        name: 'RExcelExport',
         data: [
-          { Schueler_Nachname: 'Test', Schueler_Vorname: 'Test', Schueler_Beruf: 'Beruf1', Schueler_StufeSemester: '11/1' },
-          { Schueler_Nachname: 'Test', Schueler_Vorname: 'Test', Schueler_Beruf: 'Beruf2', Schueler_StufeSemester: '11/2' }
-        ] 
-      }
+          {
+            Schueler_Nachname: 'Test',
+            Schueler_Vorname: 'Test',
+            Schueler_Beruf: 'Beruf1',
+            Schueler_StufeSemester: '11/1',
+          },
+          {
+            Schueler_Nachname: 'Test',
+            Schueler_Vorname: 'Test',
+            Schueler_Beruf: 'Beruf2',
+            Schueler_StufeSemester: '11/2',
+          },
+        ],
+      },
     ])
-    
+
     try {
       const result = parseZeugnisFile(tempFile)
       expect(result.size).toBe(1)
@@ -115,9 +123,7 @@ describe('parseZeugnisFile', () => {
 
 describe('parseHistorieFile', () => {
   test('returns empty map for file without Tabellenblatt sheets', () => {
-    const tempFile = createTempExcel([
-      { name: 'OtherSheet', data: [{ foo: 'bar' }] }
-    ])
+    const tempFile = createTempExcel([{ name: 'OtherSheet', data: [{ foo: 'bar' }] }])
     try {
       const result = parseHistorieFile(tempFile)
       expect(result.size).toBe(0)
@@ -127,9 +133,7 @@ describe('parseHistorieFile', () => {
   })
 
   test('returns empty map for empty sheets', () => {
-    const tempFile = createTempExcel([
-      { name: 'Tabellenblatt1', data: [] }
-    ])
+    const tempFile = createTempExcel([{ name: 'Tabellenblatt1', data: [] }])
     try {
       const result = parseHistorieFile(tempFile)
       expect(result.size).toBe(0)
@@ -139,10 +143,12 @@ describe('parseHistorieFile', () => {
   })
 
   test('extracts Klasse correctly', () => {
-    const tempFile = createTempExcel([{
-      name: 'Tabellenblatt1',
-      data: [{ __EMPTY: 'Klasse', __EMPTY_1: '11B501' }]
-    }])
+    const tempFile = createTempExcel([
+      {
+        name: 'Tabellenblatt1',
+        data: [{ __EMPTY: 'Klasse', __EMPTY_1: '11B501' }],
+      },
+    ])
     try {
       const result = parseHistorieFile(tempFile)
       expect(result.size).toBe(1)
@@ -154,13 +160,15 @@ describe('parseHistorieFile', () => {
   })
 
   test('parses LF01 note P-2 as note 2', () => {
-    const tempFile = createTempExcel([{
-      name: 'Tabellenblatt1',
-      data: [
-        { __EMPTY: 'Klasse', __EMPTY_1: '11B501' },
-        { __EMPTY: 'LF01', __EMPTY_1: 'P-2' },
-      ]
-    }])
+    const tempFile = createTempExcel([
+      {
+        name: 'Tabellenblatt1',
+        data: [
+          { __EMPTY: 'Klasse', __EMPTY_1: '11B501' },
+          { __EMPTY: 'LF01', __EMPTY_1: 'P-2' },
+        ],
+      },
+    ])
     try {
       const result = parseHistorieFile(tempFile)
       const entry = [...result.values()][0]
@@ -173,15 +181,17 @@ describe('parseHistorieFile', () => {
   })
 
   test('parses allgemeine Fächer notes correctly', () => {
-    const tempFile = createTempExcel([{
-      name: 'Tabellenblatt1',
-      data: [
-        { __EMPTY: 'Klasse', __EMPTY_1: '12A201' },
-        { __EMPTY: 'D',    __EMPTY_1: 'P-3' },
-        { __EMPTY: 'POWI', __EMPTY_1: 'P-2' },
-        { __EMPTY: 'SPO',  __EMPTY_1: 'P-1' },
-      ]
-    }])
+    const tempFile = createTempExcel([
+      {
+        name: 'Tabellenblatt1',
+        data: [
+          { __EMPTY: 'Klasse', __EMPTY_1: '12A201' },
+          { __EMPTY: 'D', __EMPTY_1: 'P-3' },
+          { __EMPTY: 'POWI', __EMPTY_1: 'P-2' },
+          { __EMPTY: 'SPO', __EMPTY_1: 'P-1' },
+        ],
+      },
+    ])
     try {
       const result = parseHistorieFile(tempFile)
       const entry = [...result.values()][0]
@@ -194,14 +204,16 @@ describe('parseHistorieFile', () => {
   })
 
   test('parses multiple LF notes across Halbjahre', () => {
-    const tempFile = createTempExcel([{
-      name: 'Tabellenblatt1',
-      data: [
-        { __EMPTY: 'Klasse', __EMPTY_1: '11B501' },
-        { __EMPTY: 'LF01', __EMPTY_1: 'P-2', __EMPTY_2: 'P-3' },
-        { __EMPTY: 'LF02', __EMPTY_1: 'P-4', __EMPTY_2: 'P-5' },
-      ]
-    }])
+    const tempFile = createTempExcel([
+      {
+        name: 'Tabellenblatt1',
+        data: [
+          { __EMPTY: 'Klasse', __EMPTY_1: '11B501' },
+          { __EMPTY: 'LF01', __EMPTY_1: 'P-2', __EMPTY_2: 'P-3' },
+          { __EMPTY: 'LF02', __EMPTY_1: 'P-4', __EMPTY_2: 'P-5' },
+        ],
+      },
+    ])
     try {
       const result = parseHistorieFile(tempFile)
       const entry = [...result.values()][0]
@@ -218,7 +230,7 @@ describe('parseHistorieFile', () => {
 
   test('ignores non-Tabellenblatt sheets', () => {
     const tempFile = createTempExcel([
-      { name: 'Übersicht',     data: [{ __EMPTY: 'LF01', __EMPTY_1: 'P-1' }] },
+      { name: 'Übersicht', data: [{ __EMPTY: 'LF01', __EMPTY_1: 'P-1' }] },
       { name: 'Tabellenblatt1', data: [{ __EMPTY: 'Klasse', __EMPTY_1: '11B501' }] },
     ])
     try {
@@ -247,10 +259,18 @@ describe('parseHistorieFile', () => {
 
 describe('combineZeugnisAndHistorie', () => {
   test('gibt leeres Array zurück wenn keine Historie-Einträge', () => {
-    const zeugnisData = new Map([
-      ['Key1', { nachname: 'A', vorname: 'A', beruf: 'Beruf', stufeSemester: '11/1' }]
-    ])
-    const historieData = new Map<string, { noten: { lernfelder: Map<string, { note: number | null; lehrer: string }[]>; allgemeineFaecher: Map<string, { note: number | null; lehrer: string }[]> }; klasse: string; halbjahre: string[] }>()
+    const zeugnisData = new Map([['Key1', { nachname: 'A', vorname: 'A', beruf: 'Beruf', stufeSemester: '11/1' }]])
+    const historieData = new Map<
+      string,
+      {
+        noten: {
+          lernfelder: Map<string, { note: number | null; lehrer: string }[]>
+          allgemeineFaecher: Map<string, { note: number | null; lehrer: string }[]>
+        }
+        klasse: string
+        halbjahre: string[]
+      }
+    >()
 
     const result = combineZeugnisAndHistorie(zeugnisData, historieData)
     expect(result.length).toBe(0)
@@ -258,10 +278,17 @@ describe('combineZeugnisAndHistorie', () => {
 
   test('kombiniert Zeugnis und Historie nach Reihenfolge', () => {
     const zeugnisData = new Map([
-      ['Key1', { nachname: 'Mustermann', vorname: 'Max', beruf: 'Fachinformatiker', stufeSemester: '11/2' }]
+      ['Key1', { nachname: 'Mustermann', vorname: 'Max', beruf: 'Fachinformatiker', stufeSemester: '11/2' }],
     ])
     const historieData = new Map([
-      ['AndererKey', { noten: { lernfelder: new Map([['LF01', [{ note: 2, lehrer: 'MUE' }]]]), allgemeineFaecher: new Map() }, klasse: '11B501', halbjahre: ['10/2', '11/1'] }]
+      [
+        'AndererKey',
+        {
+          noten: { lernfelder: new Map([['LF01', [{ note: 2, lehrer: 'MUE' }]]]), allgemeineFaecher: new Map() },
+          klasse: '11B501',
+          halbjahre: ['10/2', '11/1'],
+        },
+      ],
     ])
 
     const result = combineZeugnisAndHistorie(zeugnisData, historieData)
@@ -275,10 +302,13 @@ describe('combineZeugnisAndHistorie', () => {
   test('überspringt Zeugnis-Einträge ohne korrespondierendes Historie-Blatt', () => {
     const zeugnisData = new Map([
       ['A_A', { nachname: 'A', vorname: 'A', beruf: 'Beruf', stufeSemester: '11/1' }],
-      ['B_B', { nachname: 'B', vorname: 'B', beruf: 'Beruf', stufeSemester: '11/1' }]
+      ['B_B', { nachname: 'B', vorname: 'B', beruf: 'Beruf', stufeSemester: '11/1' }],
     ])
     const historieData = new Map([
-      ['Tabellenblatt1', { noten: { lernfelder: new Map(), allgemeineFaecher: new Map() }, klasse: '11B501', halbjahre: [] }]
+      [
+        'Tabellenblatt1',
+        { noten: { lernfelder: new Map(), allgemeineFaecher: new Map() }, klasse: '11B501', halbjahre: [] },
+      ],
     ])
 
     const result = combineZeugnisAndHistorie(zeugnisData, historieData)
@@ -288,14 +318,17 @@ describe('combineZeugnisAndHistorie', () => {
 
   test('überträgt halbjahre aus der Historie in den Schüler', () => {
     const zeugnisData = new Map([
-      ['Test_Test', { nachname: 'Test', vorname: 'Test', beruf: 'Beruf', stufeSemester: '11/2' }]
+      ['Test_Test', { nachname: 'Test', vorname: 'Test', beruf: 'Beruf', stufeSemester: '11/2' }],
     ])
     const historieData = new Map([
-      ['Tabellenblatt1', {
-        noten: { lernfelder: new Map(), allgemeineFaecher: new Map() },
-        klasse: '11B501',
-        halbjahre: ['10/2', '11/1']
-      }]
+      [
+        'Tabellenblatt1',
+        {
+          noten: { lernfelder: new Map(), allgemeineFaecher: new Map() },
+          klasse: '11B501',
+          halbjahre: ['10/2', '11/1'],
+        },
+      ],
     ])
 
     const result = combineZeugnisAndHistorie(zeugnisData, historieData)
@@ -308,32 +341,35 @@ describe('integration', () => {
   test('full workflow with mock data', () => {
     // Create zeugnis file
     const zeugnisFile = createTempExcel([
-      { 
-        name: 'RExcelExport', 
+      {
+        name: 'RExcelExport',
         data: [
-          { Schueler_Nachname: 'Test', Schueler_Vorname: 'User', Schueler_Beruf: 'Test', Schueler_StufeSemester: '11/1' }
-        ] 
-      }
+          {
+            Schueler_Nachname: 'Test',
+            Schueler_Vorname: 'User',
+            Schueler_Beruf: 'Test',
+            Schueler_StufeSemester: '11/1',
+          },
+        ],
+      },
     ])
-    
+
     // Create historie file with matching key
     const historieFile = createTempExcel([
-      { 
-        name: 'Tabellenblatt1', 
-        data: [
-          { __EMPTY: 'Some data' }
-        ] 
-      }
+      {
+        name: 'Tabellenblatt1',
+        data: [{ __EMPTY: 'Some data' }],
+      },
     ])
-    
+
     try {
       const zeugnisData = parseZeugnisFile(zeugnisFile)
       expect(zeugnisData.size).toBe(1)
       expect(zeugnisData.has('Test_User')).toBe(true)
-      
+
       const historieData = parseHistorieFile(historieFile)
       expect(historieData.size).toBeGreaterThanOrEqual(0)
-      
+
       // Combine - may be empty since keys don't match, that's OK
       const combined = combineZeugnisAndHistorie(zeugnisData, historieData)
       expect(Array.isArray(combined)).toBe(true)

@@ -1,4 +1,4 @@
-import { fachStunden, DEFAULT_FACH_STUNDEN } from '../shared/constants'
+import { DEFAULT_FACH_STUNDEN, fachStunden } from '../shared/constants'
 import { CONFIG_PATH } from './paths'
 
 export interface Einstellungen {
@@ -39,7 +39,7 @@ export async function ladeEinstellungen(): Promise<Einstellungen> {
       const data = await file.json()
       return {
         halbjahrStunden: migrateHalbjahrStunden(data.halbjahrStunden),
-        tutorialTipps: data.tutorialTipps ?? true
+        tutorialTipps: data.tutorialTipps ?? true,
       }
     }
   } catch {

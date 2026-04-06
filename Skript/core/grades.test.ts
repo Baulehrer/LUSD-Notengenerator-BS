@@ -1,6 +1,14 @@
-import { test, expect, describe } from 'bun:test'
-import { roundNote, roundToWholeNote, parseNote, calculateBBUNote, calculateAllgemeinesFach, calculateGesamtnote, calculateSchuelerNoten } from './grades'
-import type { Schueler, Beruf, NoteEintrag } from '../types'
+import { describe, expect, test } from 'bun:test'
+import type { Beruf, NoteEintrag, Schueler } from '../types'
+import {
+  calculateAllgemeinesFach,
+  calculateBBUNote,
+  calculateGesamtnote,
+  calculateSchuelerNoten,
+  parseNote,
+  roundNote,
+  roundToWholeNote,
+} from './grades'
 
 describe('roundNote', () => {
   test('rounds to 1 decimal place', () => {
@@ -69,7 +77,7 @@ describe('parseNote', () => {
 describe('calculateBBUNote', () => {
   const createMockBeruf = (lernfelder: Map<string, number>): Beruf => ({
     name: 'Test Beruf',
-    lernfelder
+    lernfelder,
   })
 
   const createMockSchueler = (lernfelderNoten: Map<string, NoteEintrag[]>): Schueler => ({
@@ -80,16 +88,23 @@ describe('calculateBBUNote', () => {
     stufeSemester: '11/2',
     noten: {
       lernfelder: lernfelderNoten,
-      allgemeineFaecher: new Map()
-    }
+      allgemeineFaecher: new Map(),
+    },
   })
 
   test('returns 0 for no grades', () => {
-    const beruf = createMockBeruf(new Map([['LF01', 40], ['LF02', 40]]))
-    const schueler = createMockSchueler(new Map([
-      ['LF01', [{ note: null, lehrer: '' }]],
-      ['LF02', [{ note: null, lehrer: '' }]]
-    ]))
+    const beruf = createMockBeruf(
+      new Map([
+        ['LF01', 40],
+        ['LF02', 40],
+      ]),
+    )
+    const schueler = createMockSchueler(
+      new Map([
+        ['LF01', [{ note: null, lehrer: '' }]],
+        ['LF02', [{ note: null, lehrer: '' }]],
+      ]),
+    )
 
     const result = calculateBBUNote(schueler, beruf)
     expect(result.note).toBe(0)
@@ -98,11 +113,18 @@ describe('calculateBBUNote', () => {
   })
 
   test('calculates weighted average correctly', () => {
-    const beruf = createMockBeruf(new Map([['LF01', 40], ['LF02', 80]]))
-    const schueler = createMockSchueler(new Map([
-      ['LF01', [{ note: 2, lehrer: '' }]],
-      ['LF02', [{ note: 4, lehrer: '' }]]
-    ]))
+    const beruf = createMockBeruf(
+      new Map([
+        ['LF01', 40],
+        ['LF02', 80],
+      ]),
+    )
+    const schueler = createMockSchueler(
+      new Map([
+        ['LF01', [{ note: 2, lehrer: '' }]],
+        ['LF02', [{ note: 4, lehrer: '' }]],
+      ]),
+    )
 
     // (2 * 40 + 4 * 80) / (40 + 80) = (80 + 320) / 120 = 400 / 120 = 3.33
     const result = calculateBBUNote(schueler, beruf)
@@ -112,11 +134,18 @@ describe('calculateBBUNote', () => {
   })
 
   test('ignores Lernfelder with 0 hours', () => {
-    const beruf = createMockBeruf(new Map([['LF01', 40], ['LF02', 0]]))
-    const schueler = createMockSchueler(new Map([
-      ['LF01', [{ note: 3, lehrer: '' }]],
-      ['LF02', [{ note: 5, lehrer: '' }]]
-    ]))
+    const beruf = createMockBeruf(
+      new Map([
+        ['LF01', 40],
+        ['LF02', 0],
+      ]),
+    )
+    const schueler = createMockSchueler(
+      new Map([
+        ['LF01', [{ note: 3, lehrer: '' }]],
+        ['LF02', [{ note: 5, lehrer: '' }]],
+      ]),
+    )
 
     const result = calculateBBUNote(schueler, beruf)
     expect(result.note).toBe(3)
@@ -125,9 +154,17 @@ describe('calculateBBUNote', () => {
 
   test('handles multiple grades per Lernfeld — uses latest note only', () => {
     const beruf = createMockBeruf(new Map([['LF01', 40]]))
-    const schueler = createMockSchueler(new Map([
-      ['LF01', [{ note: 2, lehrer: '' }, { note: 4, lehrer: '' }]]
-    ]))
+    const schueler = createMockSchueler(
+      new Map([
+        [
+          'LF01',
+          [
+            { note: 2, lehrer: '' },
+            { note: 4, lehrer: '' },
+          ],
+        ],
+      ]),
+    )
 
     // Only the latest (last) non-null note is used: 4 * 40 / 40 = 4
     const result = calculateBBUNote(schueler, beruf)
@@ -138,20 +175,14 @@ describe('calculateBBUNote', () => {
 
 describe('calculateAllgemeinesFach', () => {
   test('returns 0 for no grades', () => {
-    const result = calculateAllgemeinesFach(
-      [{ note: null, lehrer: '' }],
-      ['10/2']
-    )
+    const result = calculateAllgemeinesFach([{ note: null, lehrer: '' }], ['10/2'])
     expect(result.note).toBe(0)
     expect(result.stunden).toBe(0)
   })
 
   test('calculates weighted average with halbjahr hours', () => {
     // 10/2 has 40 hours
-    const result = calculateAllgemeinesFach(
-      [{ note: 3, lehrer: '' }],
-      ['10/2']
-    )
+    const result = calculateAllgemeinesFach([{ note: 3, lehrer: '' }], ['10/2'])
     expect(result.note).toBe(3)
     expect(result.stunden).toBe(40)
     expect(result.gewichtung).toBe(120)
@@ -160,8 +191,11 @@ describe('calculateAllgemeinesFach', () => {
   test('handles multiple halbjahre', () => {
     // 10/2 = 40h, 11/1 = 20h
     const result = calculateAllgemeinesFach(
-      [{ note: 2, lehrer: '' }, { note: 4, lehrer: '' }],
-      ['10/2', '11/1']
+      [
+        { note: 2, lehrer: '' },
+        { note: 4, lehrer: '' },
+      ],
+      ['10/2', '11/1'],
     )
     // (2 * 40 + 4 * 20) / 60 = 160 / 60 = 2.67
     expect(result.note).toBe(2.7)
@@ -169,10 +203,7 @@ describe('calculateAllgemeinesFach', () => {
   })
 
   test('ignores 10/1 (0 hours)', () => {
-    const result = calculateAllgemeinesFach(
-      [{ note: 3, lehrer: '' }],
-      ['10/1']
-    )
+    const result = calculateAllgemeinesFach([{ note: 3, lehrer: '' }], ['10/1'])
     expect(result.stunden).toBe(0)
     expect(result.note).toBe(0)
   })
@@ -181,9 +212,7 @@ describe('calculateAllgemeinesFach', () => {
 describe('calculateGesamtnote', () => {
   test('calculates combined average', () => {
     const bbuResult = { note: 3, gewichtung: 300, stunden: 100 }
-    const allgFaecherResults = new Map([
-      ['D', { note: 2, gewichtung: 80, stunden: 40 }]
-    ])
+    const allgFaecherResults = new Map([['D', { note: 2, gewichtung: 80, stunden: 40 }]])
 
     // (300 + 80) / (100 + 40) = 380 / 140 = 2.71
     const result = calculateGesamtnote(bbuResult, allgFaecherResults)
@@ -194,7 +223,7 @@ describe('calculateGesamtnote', () => {
     const bbuResult = { note: 3, gewichtung: 300, stunden: 100 }
     const allgFaecherResults = new Map([
       ['D', { note: 2, gewichtung: 80, stunden: 40 }],
-      ['ENG', { note: 4, gewichtung: 160, stunden: 40 }]
+      ['ENG', { note: 4, gewichtung: 160, stunden: 40 }],
     ])
 
     // (300 + 80 + 160) / (100 + 40 + 40) = 540 / 180 = 3
@@ -221,24 +250,24 @@ describe('calculateSchuelerNoten', () => {
     noten: {
       lernfelder: new Map([
         ['LF01', [{ note: 2, lehrer: 'MUE' }]],
-        ['LF02', [{ note: 3, lehrer: 'SCH' }]]
+        ['LF02', [{ note: 3, lehrer: 'SCH' }]],
       ]),
       allgemeineFaecher: new Map([
         ['D', [{ note: 2, lehrer: '' }]],
         ['ENG', [{ note: 3, lehrer: '' }]],
         ['POWI', [{ note: null, lehrer: '' }]],
         ['RKA', [{ note: null, lehrer: '' }]],
-        ['SPO', [{ note: null, lehrer: '' }]]
-      ])
-    }
+        ['SPO', [{ note: null, lehrer: '' }]],
+      ]),
+    },
   })
 
   const createFullMockBeruf = (): Beruf => ({
     name: 'Fachinformatiker',
     lernfelder: new Map([
       ['LF01', 40],
-      ['LF02', 80]
-    ])
+      ['LF02', 80],
+    ]),
   })
 
   test('calculates complete result', () => {

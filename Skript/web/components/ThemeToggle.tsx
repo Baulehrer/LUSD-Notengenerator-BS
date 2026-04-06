@@ -14,7 +14,9 @@ export function ThemeToggle({ theme, onSelect }: Props) {
       title="Farbschema wählen"
     >
       {THEMES.map(t => (
-        <option key={t.id} value={t.id}>{t.label}</option>
+        <option key={t.id} value={t.id}>
+          {t.label}
+        </option>
       ))}
     </select>
   )

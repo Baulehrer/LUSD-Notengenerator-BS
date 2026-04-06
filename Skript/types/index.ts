@@ -31,7 +31,7 @@ export interface Schueler {
   klasse: string
   beruf: string
   stufeSemester: string
-  halbjahre?: string[]   // NEU
+  halbjahre?: string[] // NEU
   noten: SchuelerNoten
 }
 
@@ -55,14 +55,22 @@ export interface KlassenErgebnis {
   schueler: Berechnungsergebnis[]
 }
 
+export type { AllgemeinesFach, LernfeldId } from '../shared/constants'
 // Konstanten liegen in shared/constants.ts. Typen werden hier re-exportiert,
 // damit bestehende Imports aus '../types' weiter funktionieren.
-export { LERNFELDER, ALLGEMEINE_FAECHER } from '../shared/constants'
-export type { LernfeldId, AllgemeinesFach } from '../shared/constants'
+export { ALLGEMEINE_FAECHER, LERNFELDER } from '../shared/constants'
 
 // ── Einzelfall-Specific Types ─────────────────────────────────────
 
-export type EinzelfallStep = 'name' | 'klasse' | 'semester' | 'beruf' | 'lernfelder' | 'allgFaecher' | 'preview' | 'ergebnis'
+export type EinzelfallStep =
+  | 'name'
+  | 'klasse'
+  | 'semester'
+  | 'beruf'
+  | 'lernfelder'
+  | 'allgFaecher'
+  | 'preview'
+  | 'ergebnis'
 
 export interface EinzelfallDraft {
   id: string

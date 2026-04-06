@@ -1,6 +1,6 @@
+import type { ThemeId } from '../hooks/useTheme'
 import { BerufSearch } from './BerufSearch'
 import { ThemeToggle } from './ThemeToggle'
-import type { ThemeId } from '../hooks/useTheme'
 
 interface Props {
   nachname: string
@@ -20,49 +20,40 @@ interface Props {
 }
 
 export function Header({
-  nachname, vorname, klasse, austritt, anzahlHalbjahre, berufName,
-  onNachnameChange, onVornameChange, onKlasseChange, onAustrittChange, onHalbjahreChange, onBerufSelect,
-  theme, onThemeSelect
+  nachname,
+  vorname,
+  klasse,
+  austritt,
+  anzahlHalbjahre,
+  berufName,
+  onNachnameChange,
+  onVornameChange,
+  onKlasseChange,
+  onAustrittChange,
+  onHalbjahreChange,
+  onBerufSelect,
+  theme,
+  onThemeSelect,
 }: Props) {
   return (
     <header className="header">
       <div className="header-left">
         <label>Name:</label>
-        <input
-          type="text"
-          value={nachname}
-          onChange={e => onNachnameChange(e.target.value)}
-          placeholder="Nachname"
-        />
+        <input type="text" value={nachname} onChange={e => onNachnameChange(e.target.value)} placeholder="Nachname" />
         <label>Vorname:</label>
-        <input
-          type="text"
-          value={vorname}
-          onChange={e => onVornameChange(e.target.value)}
-          placeholder="Vorname"
-        />
+        <input type="text" value={vorname} onChange={e => onVornameChange(e.target.value)} placeholder="Vorname" />
         <label>Klasse:</label>
-        <input
-          type="text"
-          value={klasse}
-          onChange={e => onKlasseChange(e.target.value)}
-          placeholder="z.B. 12B501"
-        />
+        <input type="text" value={klasse} onChange={e => onKlasseChange(e.target.value)} placeholder="z.B. 12B501" />
         <label>Beruf:</label>
         <BerufSearch value={berufName} onSelect={onBerufSelect} />
         <label>Austritt:</label>
-        <input
-          type="date"
-          value={austritt}
-          onChange={e => onAustrittChange(e.target.value)}
-        />
+        <input type="date" value={austritt} onChange={e => onAustrittChange(e.target.value)} />
         <label>Halbjahre:</label>
-        <select
-          value={anzahlHalbjahre}
-          onChange={e => onHalbjahreChange(parseInt(e.target.value, 10))}
-        >
+        <select value={anzahlHalbjahre} onChange={e => onHalbjahreChange(parseInt(e.target.value, 10))}>
           {[1, 2, 3, 4, 5, 6, 7].map(n => (
-            <option key={n} value={n}>{n}</option>
+            <option key={n} value={n}>
+              {n}
+            </option>
           ))}
         </select>
       </div>
@@ -78,7 +69,9 @@ export function Header({
           src="/api/logo"
           alt="Schullogo"
           className="school-logo"
-          onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
+          onError={e => {
+            ;(e.target as HTMLImageElement).style.display = 'none'
+          }}
         />
       </div>
     </header>
