@@ -1,4 +1,4 @@
-import { join } from 'path'
+import { join } from 'node:path'
 import { INPUT_DIR } from './paths'
 
 export interface StundenTemplate {
@@ -38,7 +38,7 @@ export async function ladeTemplates(): Promise<TemplateStore> {
   try {
     const file = Bun.file(TEMPLATES_PATH)
     if (await file.exists()) {
-      return await file.json() as TemplateStore
+      return (await file.json()) as TemplateStore
     }
   } catch {
     // fallback

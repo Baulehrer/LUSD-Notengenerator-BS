@@ -1,4 +1,5 @@
-import React, { useCallback } from 'react'
+import type React from 'react'
+import { useCallback } from 'react'
 
 interface NoteInputProps {
   value: number | null
@@ -12,19 +13,25 @@ function noteClass(note: number | null): string {
 }
 
 export function NoteInput({ value, onChange, disabled }: NoteInputProps) {
-  const handleChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
-    const v = parseInt(e.target.value, 10)
-    onChange(v === 0 ? null : v)
-  }, [onChange])
-
-  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLSelectElement>) => {
-    const key = e.key
-    if (key >= '0' && key <= '6') {
-      e.preventDefault()
-      const v = parseInt(key, 10)
+  const handleChange = useCallback(
+    (e: React.ChangeEvent<HTMLSelectElement>) => {
+      const v = parseInt(e.target.value, 10)
       onChange(v === 0 ? null : v)
-    }
-  }, [onChange])
+    },
+    [onChange],
+  )
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLSelectElement>) => {
+      const key = e.key
+      if (key >= '0' && key <= '6') {
+        e.preventDefault()
+        const v = parseInt(key, 10)
+        onChange(v === 0 ? null : v)
+      }
+    },
+    [onChange],
+  )
 
   return (
     <select

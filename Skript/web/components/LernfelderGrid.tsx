@@ -1,8 +1,8 @@
 import { useMemo } from 'react'
-import { NoteInput } from './NoteInput'
-import { Ergebnis } from './Ergebnis'
-import { AUSBILDUNGSJAHRE } from '../lib/constants'
 import type { BerufData, Ergebnis as ErgebnisType } from '../hooks/useSchueler'
+import { AUSBILDUNGSJAHRE } from '../lib/constants'
+import { Ergebnis } from './Ergebnis'
+import { NoteInput } from './NoteInput'
 
 interface Props {
   berufData: BerufData | null
@@ -29,17 +29,36 @@ function formatLfName(lf: string): string {
   return `LF ${num}`
 }
 
-export function LernfelderGrid({ berufData, relevanteLernfelder, lernfelderNoten, halbjahre, onNoteChange, ergebnis }: Props) {
+export function LernfelderGrid({
+  berufData,
+  relevanteLernfelder,
+  lernfelderNoten,
+  halbjahre,
+  onNoteChange,
+  ergebnis,
+}: Props) {
   const allLernfelder = [
-    'LF01','LF02','LF03','LF04','LF05','LF06',
-    'LF07','LF08','LF09','LF10','LF11','LF12',
-    'LF13','LF14','LF15','LF16','LF17','LF18'
+    'LF01',
+    'LF02',
+    'LF03',
+    'LF04',
+    'LF05',
+    'LF06',
+    'LF07',
+    'LF08',
+    'LF09',
+    'LF10',
+    'LF11',
+    'LF12',
+    'LF13',
+    'LF14',
+    'LF15',
+    'LF16',
+    'LF17',
+    'LF18',
   ]
 
-  const relevantSet = useMemo(
-    () => new Set(relevanteLernfelder.map(r => r.lf)),
-    [relevanteLernfelder]
-  )
+  const relevantSet = useMemo(() => new Set(relevanteLernfelder.map(r => r.lf)), [relevanteLernfelder])
 
   const blocks = useMemo((): LfBlock[] => {
     if (!berufData) return []
@@ -66,7 +85,7 @@ export function LernfelderGrid({ berufData, relevanteLernfelder, lernfelderNoten
       currentBlock.lernfelder.push({
         lf,
         stunden,
-        relevant: relevantSet.has(lf)
+        relevant: relevantSet.has(lf),
       })
     }
 

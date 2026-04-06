@@ -1,12 +1,6 @@
-import { useState, useCallback, useEffect, useRef } from 'react'
-import { getBeruf, calculate } from '../lib/api'
-import {
-  ALLE_HALBJAHRE,
-  ALLGEMEINE_FAECHER,
-  LERNFELDER,
-  HALBJAHR_MAP,
-  STUNDEN_GRENZEN,
-} from '../../shared/constants'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { ALLE_HALBJAHRE, ALLGEMEINE_FAECHER, HALBJAHR_MAP, LERNFELDER, STUNDEN_GRENZEN } from '../../shared/constants'
+import { calculate, getBeruf } from '../lib/api'
 
 export interface BerufData {
   name: string
@@ -103,46 +97,96 @@ export function useSchueler(halbjahrStunden: Record<string, Record<string, numbe
     if (calcTimeout.current) clearTimeout(calcTimeout.current)
     calcTimeout.current = setTimeout(async () => {
       try {
-        const result = await calculate({
-          nachname, vorname, klasse, berufName, halbjahre, semester,
+        const result = (await calculate({
+          nachname,
+          vorname,
+          klasse,
+          berufName,
+          halbjahre,
+          semester,
           austritt,
-          lernfelderNoten, allgFaecherNoten,
+          lernfelderNoten,
+          allgFaecherNoten,
           halbjahrStunden,
-          lfStundenOverrides: Object.keys(lfStundenOverrides).length > 0 ? lfStundenOverrides : undefined
-        }) as Ergebnis
+          lfStundenOverrides: Object.keys(lfStundenOverrides).length > 0 ? lfStundenOverrides : undefined,
+        })) as Ergebnis
         setErgebnis(result)
       } catch {
         setErgebnis(null)
       }
     }, 150)
 
-    return () => { if (calcTimeout.current) clearTimeout(calcTimeout.current) }
-  }, [nachname, vorname, klasse, berufName, berufData, halbjahre, semester, austritt, lernfelderNoten, allgFaecherNoten, halbjahrStunden, lfStundenOverrides])
-
-  const getRequestBody = useCallback(() => ({
-    nachname, vorname, klasse, berufName, halbjahre, semester,
+    return () => {
+      if (calcTimeout.current) clearTimeout(calcTimeout.current)
+    }
+  }, [
+    nachname,
+    vorname,
+    klasse,
+    berufName,
+    berufData,
+    halbjahre,
+    semester,
     austritt,
-    lernfelderNoten, allgFaecherNoten,
+    lernfelderNoten,
+    allgFaecherNoten,
     halbjahrStunden,
-    lfStundenOverrides: Object.keys(lfStundenOverrides).length > 0 ? lfStundenOverrides : undefined
-  }), [nachname, vorname, klasse, berufName, halbjahre, semester, austritt, lernfelderNoten, allgFaecherNoten, halbjahrStunden, lfStundenOverrides])
+    lfStundenOverrides,
+  ])
 
-  const loadFromVorlage = useCallback((data: {
-    nachname?: string; vorname?: string; klasse?: string; berufName?: string
-    austritt?: string; halbjahre?: string[]; lernfelderNoten?: Record<string, number | null>
-    allgFaecherNoten?: Record<string, (number | null)[]>
-    lfStundenOverrides?: Record<string, number>
-  }) => {
-    if (data.nachname !== undefined) setNachname(data.nachname)
-    if (data.vorname !== undefined) setVorname(data.vorname)
-    if (data.klasse !== undefined) setKlasse(data.klasse)
-    if (data.austritt !== undefined) setAustritt(data.austritt)
-    if (data.halbjahre) setAnzahlHalbjahre(data.halbjahre.length)
-    if (data.lernfelderNoten) setLernfelderNoten(data.lernfelderNoten)
-    if (data.allgFaecherNoten) setAllgFaecherNoten(data.allgFaecherNoten)
-    if (data.lfStundenOverrides) setLfStundenOverrides(data.lfStundenOverrides)
-    if (data.berufName) loadBeruf(data.berufName)
-  }, [loadBeruf])
+  const getRequestBody = useCallback(
+    () => ({
+      nachname,
+      vorname,
+      klasse,
+      berufName,
+      halbjahre,
+      semester,
+      austritt,
+      lernfelderNoten,
+      allgFaecherNoten,
+      halbjahrStunden,
+      lfStundenOverrides: Object.keys(lfStundenOverrides).length > 0 ? lfStundenOverrides : undefined,
+    }),
+    [
+      nachname,
+      vorname,
+      klasse,
+      berufName,
+      halbjahre,
+      semester,
+      austritt,
+      lernfelderNoten,
+      allgFaecherNoten,
+      halbjahrStunden,
+      lfStundenOverrides,
+    ],
+  )
+
+  const loadFromVorlage = useCallback(
+    (data: {
+      nachname?: string
+      vorname?: string
+      klasse?: string
+      berufName?: string
+      austritt?: string
+      halbjahre?: string[]
+      lernfelderNoten?: Record<string, number | null>
+      allgFaecherNoten?: Record<string, (number | null)[]>
+      lfStundenOverrides?: Record<string, number>
+    }) => {
+      if (data.nachname !== undefined) setNachname(data.nachname)
+      if (data.vorname !== undefined) setVorname(data.vorname)
+      if (data.klasse !== undefined) setKlasse(data.klasse)
+      if (data.austritt !== undefined) setAustritt(data.austritt)
+      if (data.halbjahre) setAnzahlHalbjahre(data.halbjahre.length)
+      if (data.lernfelderNoten) setLernfelderNoten(data.lernfelderNoten)
+      if (data.allgFaecherNoten) setAllgFaecherNoten(data.allgFaecherNoten)
+      if (data.lfStundenOverrides) setLfStundenOverrides(data.lfStundenOverrides)
+      if (data.berufName) loadBeruf(data.berufName)
+    },
+    [loadBeruf],
+  )
 
   const reset = useCallback(() => {
     setNachname('')
@@ -163,11 +207,28 @@ export function useSchueler(halbjahrStunden: Record<string, Record<string, numbe
   }, [])
 
   return {
-    nachname, vorname, klasse, austritt, anzahlHalbjahre, berufName, berufData,
-    lernfelderNoten, allgFaecherNoten, lfStundenOverrides, ergebnis,
-    halbjahre, semester,
-    setNachname, setVorname, setKlasse, setAustritt, setAnzahlHalbjahre,
-    loadBeruf, setLfNote, setAllgNote, setLfStunden,
+    nachname,
+    vorname,
+    klasse,
+    austritt,
+    anzahlHalbjahre,
+    berufName,
+    berufData,
+    lernfelderNoten,
+    allgFaecherNoten,
+    lfStundenOverrides,
+    ergebnis,
+    halbjahre,
+    semester,
+    setNachname,
+    setVorname,
+    setKlasse,
+    setAustritt,
+    setAnzahlHalbjahre,
+    loadBeruf,
+    setLfNote,
+    setAllgNote,
+    setLfStunden,
     getRelevanteLernfelder,
     getRequestBody,
     loadFromVorlage,

@@ -1,8 +1,8 @@
-import React, { useState, useCallback } from 'react'
-import { generatePdf, saveEinstellungen } from '../lib/api'
-import { useTemplates } from '../hooks/useTemplates'
-import { ALLE_HALBJAHRE, FAECHER, FACH_LABELS } from '../lib/constants'
+import React, { useCallback, useState } from 'react'
 import type { BerufData } from '../hooks/useSchueler'
+import { useTemplates } from '../hooks/useTemplates'
+import { generatePdf, saveEinstellungen } from '../lib/api'
+import { ALLE_HALBJAHRE, FACH_LABELS, FAECHER } from '../lib/constants'
 
 interface Props {
   halbjahrStunden: Record<string, Record<string, number>>
@@ -15,12 +15,36 @@ interface Props {
   onReset: () => void
 }
 
-const LF_IDS = ['LF01','LF02','LF03','LF04','LF05','LF06','LF07','LF08','LF09','LF10','LF11','LF12','LF13','LF14','LF15','LF16','LF17','LF18']
+const LF_IDS = [
+  'LF01',
+  'LF02',
+  'LF03',
+  'LF04',
+  'LF05',
+  'LF06',
+  'LF07',
+  'LF08',
+  'LF09',
+  'LF10',
+  'LF11',
+  'LF12',
+  'LF13',
+  'LF14',
+  'LF15',
+  'LF16',
+  'LF17',
+  'LF18',
+]
 
 export function Einstellungen({
-  halbjahrStunden, lfStundenOverrides, berufData,
-  onHalbjahrStundenChange, onLfStundenChange,
-  getRequestBody, onLoadVorlage, onReset
+  halbjahrStunden,
+  lfStundenOverrides,
+  berufData,
+  onHalbjahrStundenChange,
+  onLfStundenChange,
+  getRequestBody,
+  onLoadVorlage,
+  onReset,
 }: Props) {
   const { store, save, remove } = useTemplates()
   const [modal, setModal] = useState<'stunden' | 'save-stunden' | 'save-schueler' | 'load' | null>(null)
@@ -58,20 +82,24 @@ export function Einstellungen({
     setModal(null)
   }, [editHjStunden, editLfStunden, onHalbjahrStundenChange, onLfStundenChange, berufData])
 
-  const handleSaveTemplate = useCallback(async (type: 'stunden' | 'komplett') => {
-    if (!saveName.trim()) return
-    const data = type === 'stunden'
-      ? { halbjahrStunden, lfStundenOverrides }
-      : getRequestBody()
-    await save(type, saveName.trim(), data)
-    setSaveName('')
-    setModal(null)
-  }, [saveName, halbjahrStunden, lfStundenOverrides, getRequestBody, save])
+  const handleSaveTemplate = useCallback(
+    async (type: 'stunden' | 'komplett') => {
+      if (!saveName.trim()) return
+      const data = type === 'stunden' ? { halbjahrStunden, lfStundenOverrides } : getRequestBody()
+      await save(type, saveName.trim(), data)
+      setSaveName('')
+      setModal(null)
+    },
+    [saveName, halbjahrStunden, lfStundenOverrides, getRequestBody, save],
+  )
 
-  const handleLoadTemplate = useCallback((data: unknown) => {
-    onLoadVorlage(data)
-    setModal(null)
-  }, [onLoadVorlage])
+  const handleLoadTemplate = useCallback(
+    (data: unknown) => {
+      onLoadVorlage(data)
+      setModal(null)
+    },
+    [onLoadVorlage],
+  )
 
   const handlePdf = useCallback(async () => {
     setPdfLoading(true)
@@ -92,7 +120,7 @@ export function Einstellungen({
       URL.revokeObjectURL(url)
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e)
-      alert('PDF-Fehler: ' + msg)
+      alert(`PDF-Fehler: ${msg}`)
     }
     setPdfLoading(false)
   }, [getRequestBody])
@@ -108,7 +136,7 @@ export function Einstellungen({
   const updateFachStunden = (hj: string, fach: string, value: number) => {
     setEditHjStunden(prev => ({
       ...prev,
-      [hj]: { ...prev[hj], [fach]: value }
+      [hj]: { ...prev[hj], [fach]: value },
     }))
   }
 
@@ -121,17 +149,11 @@ export function Einstellungen({
           Vorlage laden
         </button>
 
-        <button onClick={() => setModal('save-schueler')}>
-          Schüler speichern
-        </button>
+        <button onClick={() => setModal('save-schueler')}>Schüler speichern</button>
 
-        <button onClick={() => setModal('save-stunden')}>
-          Stundenwerte speichern
-        </button>
+        <button onClick={() => setModal('save-stunden')}>Stundenwerte speichern</button>
 
-        <button onClick={openStundenEdit}>
-          Stunden ändern
-        </button>
+        <button onClick={openStundenEdit}>Stunden ändern</button>
 
         <button onClick={onReset} className="btn-danger">
           Zurücksetzen
@@ -156,7 +178,9 @@ export function Einstellungen({
                 <thead>
                   <tr>
                     <th>Fach</th>
-                    {ALLE_HALBJAHRE.map(hj => <th key={hj}>{hj}</th>)}
+                    {ALLE_HALBJAHRE.map(hj => (
+                      <th key={hj}>{hj}</th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
@@ -192,7 +216,9 @@ export function Einstellungen({
                           type="number"
                           min={0}
                           value={editLfStunden[lf] ?? 0}
-                          onChange={e => setEditLfStunden(prev => ({ ...prev, [lf]: parseInt(e.target.value, 10) || 0 }))}
+                          onChange={e =>
+                            setEditLfStunden(prev => ({ ...prev, [lf]: parseInt(e.target.value, 10) || 0 }))
+                          }
                         />
                       </React.Fragment>
                     )
@@ -203,7 +229,9 @@ export function Einstellungen({
 
             <div className="modal-actions">
               <button onClick={() => setModal(null)}>Abbrechen</button>
-              <button onClick={saveStunden} className="btn-primary">Speichern</button>
+              <button onClick={saveStunden} className="btn-primary">
+                Speichern
+              </button>
             </div>
           </div>
         </div>
@@ -220,10 +248,19 @@ export function Einstellungen({
               value={saveName}
               onChange={e => setSaveName(e.target.value)}
               autoFocus
-              onKeyDown={e => { if (e.key === 'Enter') handleSaveTemplate('stunden') }}
+              onKeyDown={e => {
+                if (e.key === 'Enter') handleSaveTemplate('stunden')
+              }}
             />
             <div className="modal-actions">
-              <button onClick={() => { setModal(null); setSaveName('') }}>Abbrechen</button>
+              <button
+                onClick={() => {
+                  setModal(null)
+                  setSaveName('')
+                }}
+              >
+                Abbrechen
+              </button>
               <button onClick={() => handleSaveTemplate('stunden')} className="btn-primary" disabled={!saveName.trim()}>
                 Speichern
               </button>
@@ -243,11 +280,24 @@ export function Einstellungen({
               value={saveName}
               onChange={e => setSaveName(e.target.value)}
               autoFocus
-              onKeyDown={e => { if (e.key === 'Enter') handleSaveTemplate('komplett') }}
+              onKeyDown={e => {
+                if (e.key === 'Enter') handleSaveTemplate('komplett')
+              }}
             />
             <div className="modal-actions">
-              <button onClick={() => { setModal(null); setSaveName('') }}>Abbrechen</button>
-              <button onClick={() => handleSaveTemplate('komplett')} className="btn-primary" disabled={!saveName.trim()}>
+              <button
+                onClick={() => {
+                  setModal(null)
+                  setSaveName('')
+                }}
+              >
+                Abbrechen
+              </button>
+              <button
+                onClick={() => handleSaveTemplate('komplett')}
+                className="btn-primary"
+                disabled={!saveName.trim()}
+              >
                 Speichern
               </button>
             </div>
@@ -265,10 +315,16 @@ export function Einstellungen({
             ) : (
               <div style={{ maxHeight: 300, overflowY: 'auto' }}>
                 {allTemplates.map(t => (
-                  <div key={t.id} style={{
-                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                    padding: '10px 0', borderBottom: '1px solid var(--border)'
-                  }}>
+                  <div
+                    key={t.id}
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      padding: '10px 0',
+                      borderBottom: '1px solid var(--border)',
+                    }}
+                  >
                     <div>
                       <strong>{t.name}</strong>
                       <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginLeft: 8 }}>
@@ -276,10 +332,17 @@ export function Einstellungen({
                       </span>
                     </div>
                     <div style={{ display: 'flex', gap: 6 }}>
-                      <button onClick={() => handleLoadTemplate(t.data)} style={{ fontSize: '0.8rem', padding: '5px 10px' }}>
+                      <button
+                        onClick={() => handleLoadTemplate(t.data)}
+                        style={{ fontSize: '0.8rem', padding: '5px 10px' }}
+                      >
                         Laden
                       </button>
-                      <button onClick={() => remove(t.id)} className="btn-danger" style={{ fontSize: '0.8rem', padding: '5px 10px' }}>
+                      <button
+                        onClick={() => remove(t.id)}
+                        className="btn-danger"
+                        style={{ fontSize: '0.8rem', padding: '5px 10px' }}
+                      >
                         ×
                       </button>
                     </div>

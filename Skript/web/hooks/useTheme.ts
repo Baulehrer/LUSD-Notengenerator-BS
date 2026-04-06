@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 
 export const THEMES = [
   { id: 'standard', label: 'Standard' },
@@ -10,7 +10,7 @@ export const THEMES = [
   { id: 'kontrast', label: 'Hoch-Kontrast' },
 ] as const
 
-export type ThemeId = typeof THEMES[number]['id']
+export type ThemeId = (typeof THEMES)[number]['id']
 
 export function useTheme() {
   const [theme, setTheme] = useState<ThemeId>(() => {

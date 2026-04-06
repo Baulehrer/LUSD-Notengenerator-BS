@@ -15,10 +15,10 @@ export async function calculate(data: unknown): Promise<unknown> {
   const res = await fetch(`${BASE}/api/calculate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data)
+    body: JSON.stringify(data),
   })
   if (!res.ok) {
-    const err = await res.json() as { error: string }
+    const err = (await res.json()) as { error: string }
     throw new Error(err.error)
   }
   return res.json()
@@ -28,16 +28,19 @@ export async function generatePdf(data: unknown): Promise<Blob> {
   const res = await fetch(`${BASE}/api/pdf`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data)
+    body: JSON.stringify(data),
   })
   if (!res.ok) {
-    const err = await res.json() as { error: string }
+    const err = (await res.json()) as { error: string }
     throw new Error(err.error)
   }
   return res.blob()
 }
 
-export async function getEinstellungen(): Promise<{ halbjahrStunden: Record<string, Record<string, number>>; tutorialTipps: boolean }> {
+export async function getEinstellungen(): Promise<{
+  halbjahrStunden: Record<string, Record<string, number>>
+  tutorialTipps: boolean
+}> {
   const res = await fetch(`${BASE}/api/einstellungen`)
   return res.json()
 }
@@ -46,7 +49,7 @@ export async function saveEinstellungen(data: unknown): Promise<void> {
   await fetch(`${BASE}/api/einstellungen`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data)
+    body: JSON.stringify(data),
   })
 }
 
@@ -64,7 +67,7 @@ export async function saveTemplate(type: 'stunden' | 'komplett', name: string, d
   await fetch(`${BASE}/api/templates`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ type, name, data })
+    body: JSON.stringify({ type, name, data }),
   })
 }
 

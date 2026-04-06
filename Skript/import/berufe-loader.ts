@@ -1,9 +1,10 @@
-import * as XLSX from 'xlsx'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
+import * as XLSX from 'xlsx'
 import type { Beruf, LernfeldId } from '../types'
 
-const DEFAULT_DATA_URL = 'https://schulehessen.de/LUSD-Anleitungen/Schulformbezogene%20Informationen/Berufliche%20Schulen/BS_Schulformen_Berufe_Lernfelder.xlsx'
+const DEFAULT_DATA_URL =
+  'https://schulehessen.de/LUSD-Anleitungen/Schulformbezogene%20Informationen/Berufliche%20Schulen/BS_Schulformen_Berufe_Lernfelder.xlsx'
 
 export class BerufeLoader {
   private berufe: Map<string, Beruf> = new Map()
@@ -32,29 +33,29 @@ export class BerufeLoader {
       throw new Error('Sheet "Berufe mit Lernfeldern" nicht gefunden')
     }
     const data = XLSX.utils.sheet_to_json<{ Beruf: string; Fachkürzel: string; 'Stunden Lernfeld': number }>(sheet)
-    
+
     // Group by Beruf
     const berufMap = new Map<string, Map<LernfeldId, number>>()
-    
+
     for (const row of data) {
       const name = String(row.Beruf || '').trim()
       const lfId = String(row.Fachkürzel || '').trim() as LernfeldId
       const stunden = Number(row['Stunden Lernfeld']) || 0
-      
+
       if (!name || !lfId.startsWith('LF')) continue
-      
+
       if (!berufMap.has(name)) {
         berufMap.set(name, new Map())
       }
-      
+
       berufMap.get(name)!.set(lfId, stunden)
     }
-    
+
     // Convert to Beruf objects
     for (const [name, lernfelder] of berufMap) {
       const beruf: Beruf = {
         name,
-        lernfelder
+        lernfelder,
       }
       this.berufe.set(name.toLowerCase(), beruf)
     }
@@ -62,19 +63,19 @@ export class BerufeLoader {
 
   getBeruf(name: string): Beruf | undefined {
     const normalized = name.toLowerCase().trim()
-    
+
     // Direct match
     if (this.berufe.has(normalized)) {
       return this.berufe.get(normalized)
     }
-    
+
     // Fuzzy search
     for (const [key, beruf] of this.berufe) {
       if (key.includes(normalized) || normalized.includes(key)) {
         return beruf
       }
     }
-    
+
     return undefined
   }
 

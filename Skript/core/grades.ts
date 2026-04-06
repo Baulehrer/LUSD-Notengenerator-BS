@@ -1,15 +1,10 @@
-import type { Schueler, Berechnungsergebnis, Beruf, NoteEintrag } from '../types'
-import {
-  LERNFELDER,
-  ALLGEMEINE_FAECHER,
-  DEFAULT_FACH_STUNDEN,
-  ALLE_HALBJAHRE,
-} from '../shared/constants'
+import { ALLE_HALBJAHRE, ALLGEMEINE_FAECHER, DEFAULT_FACH_STUNDEN, LERNFELDER } from '../shared/constants'
+import type { Berechnungsergebnis, Beruf, NoteEintrag, Schueler } from '../types'
 
 // Flat fallback (nur für Standalone-Aufrufe von calculateAllgemeinesFach aus Tests):
 // pro Halbjahr der Default-Wert des Fachs "D".
 const DEFAULT_FLAT_STUNDEN: Record<string, number> = Object.fromEntries(
-  ALLE_HALBJAHRE.map(hj => [hj, DEFAULT_FACH_STUNDEN[hj]?.D ?? 0])
+  ALLE_HALBJAHRE.map(hj => [hj, DEFAULT_FACH_STUNDEN[hj]?.D ?? 0]),
 )
 
 export function roundNote(note: number): number {
@@ -23,14 +18,18 @@ export function roundToWholeNote(note: number): number {
 export function parseNote(value: string | null | undefined): number | null {
   if (!value) return null
   const match = value.match(/P-(\d)/)
-  if (match && match[1]) {
+  if (match?.[1]) {
     const n = parseInt(match[1], 10)
     return n >= 1 && n <= 6 ? n : null
   }
   return null
 }
 
-export function calculateBBUNote(schueler: Schueler, beruf: Beruf, lfStundenOverrides?: Map<string, number>): { note: number; gewichtung: number; stunden: number } {
+export function calculateBBUNote(
+  schueler: Schueler,
+  beruf: Beruf,
+  lfStundenOverrides?: Map<string, number>,
+): { note: number; gewichtung: number; stunden: number } {
   let totalGewichtung = 0
   let totalStunden = 0
 
@@ -50,14 +49,14 @@ export function calculateBBUNote(schueler: Schueler, beruf: Beruf, lfStundenOver
   return {
     note: roundNote(note),
     gewichtung: totalGewichtung,
-    stunden: totalStunden
+    stunden: totalStunden,
   }
 }
 
 export function calculateAllgemeinesFach(
   notenListe: NoteEintrag[],
   halbjahre: string[],
-  halbjahrStunden?: Record<string, number>
+  halbjahrStunden?: Record<string, number>,
 ): { note: number; gewichtung: number; stunden: number } {
   const stundenMap = halbjahrStunden ?? DEFAULT_FLAT_STUNDEN
   let totalGewichtung = 0
@@ -79,18 +78,18 @@ export function calculateAllgemeinesFach(
   return {
     note: roundNote(note),
     gewichtung: totalGewichtung,
-    stunden: totalStunden
+    stunden: totalStunden,
   }
 }
 
 export function calculateGesamtnote(
   bbuResult: { note: number; gewichtung: number; stunden: number },
-  allgFaecherResults: Map<string, { note: number; gewichtung: number; stunden: number }>
+  allgFaecherResults: Map<string, { note: number; gewichtung: number; stunden: number }>,
 ): number {
-  const totalGewichtung = bbuResult.gewichtung + 
-    Array.from(allgFaecherResults.values()).reduce((sum, r) => sum + r.gewichtung, 0)
-  const totalStunden = bbuResult.stunden + 
-    Array.from(allgFaecherResults.values()).reduce((sum, r) => sum + r.stunden, 0)
+  const totalGewichtung =
+    bbuResult.gewichtung + Array.from(allgFaecherResults.values()).reduce((sum, r) => sum + r.gewichtung, 0)
+  const totalStunden =
+    bbuResult.stunden + Array.from(allgFaecherResults.values()).reduce((sum, r) => sum + r.stunden, 0)
 
   return totalStunden > 0 ? roundNote(totalGewichtung / totalStunden) : 0
 }
@@ -100,7 +99,7 @@ export function calculateSchuelerNoten(
   beruf: Beruf,
   halbjahre: string[],
   halbjahrStunden?: Record<string, Record<string, number>>,
-  lfStundenOverrides?: Map<string, number>
+  lfStundenOverrides?: Map<string, number>,
 ): Berechnungsergebnis {
   const bbuResult = calculateBBUNote(schueler, beruf, lfStundenOverrides)
   const stundenMap = halbjahrStunden ?? DEFAULT_FACH_STUNDEN
@@ -122,7 +121,7 @@ export function calculateSchuelerNoten(
   for (const [fach, result] of allgFaecherResults) {
     allgFaecherNoten.set(fach, {
       note: result.note,
-      noteGerundet: roundToWholeNote(result.note)
+      noteGerundet: roundToWholeNote(result.note),
     })
   }
 
@@ -136,6 +135,6 @@ export function calculateSchuelerNoten(
     stundenBBU: bbuResult.stunden,
     stundenAllg: Array.from(allgFaecherResults.values()).reduce((sum, r) => sum + r.stunden, 0),
     gewichtungBBU: bbuResult.gewichtung,
-    gewichtungAllg: Array.from(allgFaecherResults.values()).reduce((sum, r) => sum + r.gewichtung, 0)
+    gewichtungAllg: Array.from(allgFaecherResults.values()).reduce((sum, r) => sum + r.gewichtung, 0),
   }
 }

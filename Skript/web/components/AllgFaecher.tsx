@@ -1,8 +1,8 @@
 import { useMemo } from 'react'
-import { NoteInput } from './NoteInput'
-import { Ergebnis } from './Ergebnis'
-import { AUSBILDUNGSJAHRE, FACH_LABELS } from '../lib/constants'
 import type { Ergebnis as ErgebnisType } from '../hooks/useSchueler'
+import { AUSBILDUNGSJAHRE, FACH_LABELS } from '../lib/constants'
+import { Ergebnis } from './Ergebnis'
+import { NoteInput } from './NoteInput'
 
 interface Props {
   halbjahre: string[]
@@ -15,8 +15,13 @@ interface Props {
 }
 
 export function AllgFaecher({
-  halbjahre, alleHalbjahre, allgemeineFaecher, allgFaecherNoten,
-  halbjahrStunden, onNoteChange, ergebnis
+  halbjahre,
+  alleHalbjahre,
+  allgemeineFaecher,
+  allgFaecherNoten,
+  halbjahrStunden,
+  onNoteChange,
+  ergebnis,
 }: Props) {
   const activeSet = useMemo(() => new Set(halbjahre), [halbjahre])
 
@@ -97,17 +102,13 @@ export function AllgFaecher({
                     })}
                     <td className="endnote-cell">
                       {endnote ? (
-                        <span className={`note-${endnote.vorschlag}`}>
-                          {endnote.endnote.toFixed(2)}
-                        </span>
-                      ) : '–'}
+                        <span className={`note-${endnote.vorschlag}`}>{endnote.endnote.toFixed(2)}</span>
+                      ) : (
+                        '–'
+                      )}
                     </td>
                     <td className="vorschlag-cell">
-                      {endnote ? (
-                        <span className={`note-${endnote.vorschlag}`}>
-                          {endnote.vorschlag}
-                        </span>
-                      ) : '–'}
+                      {endnote ? <span className={`note-${endnote.vorschlag}`}>{endnote.vorschlag}</span> : '–'}
                     </td>
                   </tr>
                 )

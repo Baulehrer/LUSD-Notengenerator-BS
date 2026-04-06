@@ -1,12 +1,10 @@
-import { join, dirname } from 'path'
+import { dirname, join } from 'node:path'
 
 // Compiled Bun binary: argv[1] starts with /$bunfs/, execPath = actual exe
 // Dev mode (bun main.ts): argv[1] ends with .ts, execPath = /usr/bin/bun
 const isCompiled = process.argv[1]?.startsWith('/$bunfs/') ?? false
 
-export const ROOT_DIR = isCompiled
-  ? dirname(process.execPath)
-  : join(import.meta.dir, '..', '..')
+export const ROOT_DIR = isCompiled ? dirname(process.execPath) : join(import.meta.dir, '..', '..')
 
 export const INPUT_DIR = join(ROOT_DIR, 'Input')
 export const OUTPUT_DIR = join(ROOT_DIR, 'Output')
