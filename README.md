@@ -2,6 +2,16 @@
 
 Zeugnisnoten-Berechnung für hessische Berufsschulen — Web-App mit PDF-Export.
 
+## Screenshots
+
+| Leere Eingabe | Mit Noten |
+|---|---|
+| ![Leere Eingabe](screenshots/01-leer.png) | ![Mit Noten](screenshots/03-mit-noten.png) |
+
+| Nachtmodus | Einstellungen |
+|---|---|
+| ![Nachtmodus](screenshots/04-dark-mode.png) | ![Einstellungen](screenshots/05-einstellungen.png) |
+
 ## Was macht das Tool?
 
 An Berufsschulen müssen Lehrkräfte für Abgangszeugnisse gewichtete Durchschnittsnoten berechnen. Die BBU-Note (Berufsbezogener Unterricht) ergibt sich aus den Lernfeld-Noten, gewichtet nach Unterrichtsstunden. Die Gesamtnote kombiniert BBU und allgemeine Fächer. Dieses Tool übernimmt die Berechnung und erstellt ein fertiges PDF.
