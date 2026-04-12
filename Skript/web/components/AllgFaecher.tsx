@@ -87,7 +87,12 @@ export function AllgFaecher({
                 const endnote = fachEndnoten[fach]
                 return (
                   <tr key={fach}>
-                    <td>{FACH_LABELS[fach] || fach}</td>
+                    <td>
+                      <div>{FACH_LABELS[fach] || fach}</div>
+                      <div className="fach-stunden">
+                        {halbjahre.map(hj => `${hj}: ${halbjahrStunden[hj]?.[fach] ?? 0}h`).join(' · ')}
+                      </div>
+                    </td>
                     {alleHalbjahre.map((hj, hjIdx) => {
                       const isActive = activeSet.has(hj)
                       return (

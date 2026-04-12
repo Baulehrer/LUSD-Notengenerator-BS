@@ -1,6 +1,6 @@
 # LUSD Notengenerator (BS)
 
-Zeugnisnoten-Berechnung für hessische Berufsschulen.
+Zeugnisnoten-Berechnung für hessische Berufsschulen — Web-App mit PDF-Export.
 
 ## Was macht das Tool?
 
@@ -13,17 +13,20 @@ An Berufsschulen müssen Lehrkräfte für Abgangszeugnisse gewichtete Durchschni
 - **Semester-Filter** — Je nach Ausscheide-Semester werden nur die relevanten Lernfelder angezeigt
 - **Schnelle Noteneingabe** — Inline-Skala mit Zifferntasten, kein Tippen nötig
 - **PDF-Export** — Übersichtliches PDF mit Notenaufschlüsselung, Logos und Unterschriftsfeld
-- **Entwürfe** — Eingaben werden automatisch gespeichert und können später fortgesetzt werden
-- **Tutorial** — Geführter Durchlauf mit Beispieldaten, erklärt jeden Schritt
-- **Tipps** — Kontextuelle Hinweise bei der Eingabe (abschaltbar)
-- **Einstellungen** — Stunden pro Halbjahr und Tipps anpassen
-
-## Geplant
-
-- Klassenberechnung mit LUSD-Import
-- Klassenübersicht und Notenverteilung
+- **Entwürfe** — Eingaben werden automatisch gespeichert (localStorage) und können später fortgesetzt werden
+- **Undo** — Strg+Z macht die letzte Notenänderung rückgängig
+- **Tastaturkürzel** — Strg+P (PDF), Strg+S (Gespeichert-Toast), Esc (Modal schließen)
+- **Vorlagen** — Stundenwerte und Schülerdaten als Vorlage speichern/laden
+- **Einstellungen** — Stunden pro Halbjahr und Lernfeld-Stunden anpassen
+- **Dark/Light Mode** — Automatisches Theme basierend auf Systemeinstellung
 
 ## Installation
+
+### Als Standalone-Binary (empfohlen)
+
+Binary von der [GitHub Releases-Seite](https://github.com/Baulehrer/LUSD-Notengenerator-BS/releases) herunterladen und ausführen.
+
+### Aus dem Source-Code
 
 Voraussetzung: [Bun](https://bun.sh) installiert.
 
@@ -32,6 +35,54 @@ cd Skript
 bun install
 bun run start
 ```
+
+Der Server startet auf `http://localhost:3000` und öffnet automatisch den Browser.
+
+### Entwicklungsmodus
+
+```bash
+cd Skript
+bun run dev        # Dev-Server mit HMR
+bun test           # Tests ausführen (69 Tests)
+bun run typecheck  # TypeScript-Prüfung
+bun run lint       # Biome Lint
+bun run format     # Biome Formatierung
+```
+
+## Architektur
+
+```
+Skript/
+├── main.ts              # Einstiegspunkt → Bun.serve auf Port 3000
+├── server.ts            # REST-API (berufe, pdf, einstellungen, templates, logo)
+├── core/grades.ts       # Notenberechnung (client + server)
+├── shared/constants.ts  # Zentrale Konstanten (LERNFELDER, FAECHER, etc.)
+├── types/index.ts        # Domain-Typen (Schueler, Beruf, Berechnungsergebnis)
+├── config/              # Pfade, Einstellungen, Vorlagen
+├── import/              # Excel-Parser (Berufe) und LUSD-Parser
+├── export/pdf.ts         # PDF-Generierung (pdfkit, lazy-loaded)
+├── web/                 # React 19 Frontend
+│   ├── app.tsx           # Root-Komponente mit ErrorBoundary
+│   ├── components/       # Header, LernfelderGrid, AllgFaecher, Einstellungen, etc.
+│   ├── hooks/            # useSchueler, useAutosave, useUndo, useTheme, useTemplates
+│   └── styles/           # global.css, components.css
+└── tui/                  # Dormant — nicht aktiv
+```
+
+**Wichtige Punkte:**
+- Notenberechnung läuft **clientseitig** im Browser (kein `/api/calculate`-Endpoint)
+- PDF-Generierung ist **serverseitig** (`POST /api/pdf`), pdfkit wird per Dynamic Import geladen
+- `shared/constants.ts` ist die Single Source of Truth
+- `config/paths.ts` erkennt kompilierte Binary vs. Dev-Modus
+
+## Tastaturkürzel
+
+| Kürzel | Aktion |
+|--------|--------|
+| Strg+Z / Cmd+Z | Letzte Notenänderung rückgängig machen |
+| Strg+P / Cmd+P | PDF erstellen |
+| Strg+S / Cmd+S | Gespeichert-Toast anzeigen |
+| Esc | Modal schließen |
 
 ## Lizenz
 

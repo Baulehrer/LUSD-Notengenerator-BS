@@ -29,6 +29,7 @@ export function useSchueler(halbjahrStunden: Record<string, Record<string, numbe
   const [anzahlHalbjahre, setAnzahlHalbjahre] = useState(6)
   const [berufName, setBerufName] = useState('')
   const [berufData, setBerufData] = useState<BerufData | null>(null)
+  const [berufLoading, setBerufLoading] = useState(false)
   const [lernfelderNoten, setLernfelderNoten] = useState<Record<string, number | null>>({})
   const [allgFaecherNoten, setAllgFaecherNoten] = useState<Record<string, (number | null)[]>>(() => {
     const init: Record<string, (number | null)[]> = {}
@@ -60,6 +61,7 @@ export function useSchueler(halbjahrStunden: Record<string, Record<string, numbe
 
   const loadBeruf = useCallback(async (name: string) => {
     setBerufName(name)
+    setBerufLoading(true)
     try {
       const data = await getBeruf(name)
       setBerufData(data)
@@ -67,6 +69,8 @@ export function useSchueler(halbjahrStunden: Record<string, Record<string, numbe
       setLfStundenOverrides({})
     } catch {
       setBerufData(null)
+    } finally {
+      setBerufLoading(false)
     }
   }, [])
 
@@ -239,6 +243,7 @@ export function useSchueler(halbjahrStunden: Record<string, Record<string, numbe
     anzahlHalbjahre,
     berufName,
     berufData,
+    berufLoading,
     lernfelderNoten,
     allgFaecherNoten,
     lfStundenOverrides,
