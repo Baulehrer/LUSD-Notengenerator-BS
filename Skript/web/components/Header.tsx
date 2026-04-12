@@ -1,3 +1,4 @@
+import pkg from '../../package.json' with { type: 'json' }
 import type { ThemeId } from '../hooks/useTheme'
 import { BerufSearch } from './BerufSearch'
 import { ThemeToggle } from './ThemeToggle'
@@ -9,11 +10,12 @@ interface Props {
   austritt: string
   anzahlHalbjahre: number
   berufName: string
+  berufLoading?: boolean
   onNachnameChange: (v: string) => void
   onVornameChange: (v: string) => void
   onKlasseChange: (v: string) => void
   onAustrittChange: (v: string) => void
-  onHalbjahreChange: (v: number) => void
+  onHalbjahreChange: (n: number) => void
   onBerufSelect: (name: string) => void
   theme: ThemeId
   onThemeSelect: (id: ThemeId) => void
@@ -26,6 +28,7 @@ export function Header({
   austritt,
   anzahlHalbjahre,
   berufName,
+  berufLoading,
   onNachnameChange,
   onVornameChange,
   onKlasseChange,
@@ -45,7 +48,10 @@ export function Header({
         <label>Klasse:</label>
         <input type="text" value={klasse} onChange={e => onKlasseChange(e.target.value)} placeholder="z.B. 12B501" />
         <label>Beruf:</label>
-        <BerufSearch value={berufName} onSelect={onBerufSelect} />
+        <div className="beruf-search-wrapper">
+          <BerufSearch value={berufName} onSelect={onBerufSelect} />
+          {berufLoading && <span className="spinner" />}
+        </div>
         <label>Austritt:</label>
         <input type="date" value={austritt} onChange={e => onAustrittChange(e.target.value)} />
         <label>Halbjahre:</label>
@@ -60,7 +66,7 @@ export function Header({
 
       <div className="header-center">
         <h1>LUSD-Notengenerator</h1>
-        <div className="subtitle">Version 0.7.0 &mdash; S. Kaufmann</div>
+        <div className="subtitle">v{pkg.version} &mdash; S. Kaufmann</div>
       </div>
 
       <div className="header-right">

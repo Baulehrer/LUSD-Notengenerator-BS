@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react'
+import { Fragment, useCallback, useState } from 'react'
 import type { BerufData } from '../hooks/useSchueler'
 import { useTemplates } from '../hooks/useTemplates'
 import { generatePdf, saveEinstellungen } from '../lib/api'
@@ -13,6 +13,8 @@ interface Props {
   getRequestBody: () => unknown
   onLoadVorlage: (data: unknown) => void
   onReset: () => void
+  onPdfGenerated?: () => void
+  clearDraft?: () => void
 }
 
 const LF_IDS = [
@@ -45,6 +47,8 @@ export function Einstellungen({
   getRequestBody,
   onLoadVorlage,
   onReset,
+  onPdfGenerated,
+  clearDraft,
 }: Props) {
   const { store, save, remove } = useTemplates()
   const [modal, setModal] = useState<'stunden' | 'save-stunden' | 'save-schueler' | 'load' | null>(null)
@@ -118,12 +122,15 @@ export function Einstellungen({
       a.download = `${parts}.pdf`
       a.click()
       URL.revokeObjectURL(url)
+      if (typeof onPdfGenerated === 'function') {
+        onPdfGenerated()
+      }
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e)
       alert(`PDF-Fehler: ${msg}`)
     }
     setPdfLoading(false)
-  }, [getRequestBody])
+  }, [getRequestBody, onPdfGenerated])
 
   const allTemplates = [
     ...store.stundenTemplates.map(t => ({ ...t, type: 'stunden' as const })),
@@ -155,7 +162,13 @@ export function Einstellungen({
 
         <button onClick={openStundenEdit}>Stunden ändern</button>
 
-        <button onClick={onReset} className="btn-danger">
+        <button
+          onClick={() => {
+            onReset()
+            if (typeof clearDraft === 'function') clearDraft()
+          }}
+          className="btn-danger"
+        >
           Zurücksetzen
         </button>
 
@@ -168,7 +181,7 @@ export function Einstellungen({
 
       {/* Stunden Edit Modal (Fächer + Lernfelder) */}
       {modal === 'stunden' && (
-        <div className="modal-overlay" onClick={() => setModal(null)}>
+        <div className="modal-overlay" onClick={() => setModal(null)} role="dialog" aria-modal="true">
           <div className="modal modal-wide" onClick={e => e.stopPropagation()}>
             <h3>Stundenwerte ändern</h3>
 
@@ -210,7 +223,7 @@ export function Einstellungen({
                   {activeLfIds.map(lf => {
                     const num = parseInt(lf.replace('LF', ''), 10)
                     return (
-                      <React.Fragment key={lf}>
+                      <Fragment key={lf}>
                         <label>LF {num}:</label>
                         <input
                           type="number"
@@ -220,7 +233,7 @@ export function Einstellungen({
                             setEditLfStunden(prev => ({ ...prev, [lf]: parseInt(e.target.value, 10) || 0 }))
                           }
                         />
-                      </React.Fragment>
+                      </Fragment>
                     )
                   })}
                 </div>
@@ -239,7 +252,7 @@ export function Einstellungen({
 
       {/* Save Stunden Template */}
       {modal === 'save-stunden' && (
-        <div className="modal-overlay" onClick={() => setModal(null)}>
+        <div className="modal-overlay" onClick={() => setModal(null)} role="dialog" aria-modal="true">
           <div className="modal" onClick={e => e.stopPropagation()}>
             <h3>Stundenwerte als Vorlage speichern</h3>
             <input
@@ -271,7 +284,7 @@ export function Einstellungen({
 
       {/* Save Schüler Template */}
       {modal === 'save-schueler' && (
-        <div className="modal-overlay" onClick={() => setModal(null)}>
+        <div className="modal-overlay" onClick={() => setModal(null)} role="dialog" aria-modal="true">
           <div className="modal" onClick={e => e.stopPropagation()}>
             <h3>Schüler als Vorlage speichern</h3>
             <input
@@ -307,7 +320,7 @@ export function Einstellungen({
 
       {/* Load Template */}
       {modal === 'load' && (
-        <div className="modal-overlay" onClick={() => setModal(null)}>
+        <div className="modal-overlay" onClick={() => setModal(null)} role="dialog" aria-modal="true">
           <div className="modal" onClick={e => e.stopPropagation()}>
             <h3>Vorlage laden</h3>
             {allTemplates.length === 0 ? (

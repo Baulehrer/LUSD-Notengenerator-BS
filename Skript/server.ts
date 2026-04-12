@@ -4,7 +4,6 @@ import { type Einstellungen, ladeEinstellungen, speichereEinstellungen } from '.
 import { DATA_FILE, INPUT_DIR, OUTPUT_DIR, ROOT_DIR } from './config/paths'
 import { ladeTemplates, speichereTemplates, type TemplateStore } from './config/templates'
 import { calculateSchuelerNoten } from './core/grades'
-import { generatePDF } from './export/pdf'
 import { BerufeLoader } from './import/berufe-loader'
 import type { Beruf, NoteEintrag, Schueler } from './types'
 import index from './web/index.html'
@@ -124,6 +123,7 @@ export async function startServer(port = 3000) {
             const outputPath = join(OUTPUT_DIR, filename)
 
             await Bun.write(join(ROOT_DIR, 'Output', '.gitkeep'), '')
+            const { generatePDF } = await import('./export/pdf')
             await generatePDF([ergebnis], outputPath, { beruf, halbjahre, halbjahrStunden })
 
             const file = Bun.file(outputPath)
