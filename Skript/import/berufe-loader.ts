@@ -20,44 +20,61 @@ export class BerufeLoader {
   }
 
   async load(filePath: string): Promise<void> {
-    // Auto-download if file doesn't exist
-    if (!fs.existsSync(filePath)) {
-      console.log(`Datei nicht gefunden: ${filePath}`)
-      console.log('Lade BS_Schulformen_Berufe_Lernfelder.xlsx herunter...')
-      await this.downloadFile(DEFAULT_DATA_URL, filePath)
-      console.log('Download abgeschlossen.')
+    // Ensure Input/ directory exists
+    await fs.promises.mkdir(path.dirname(filePath), { recursive: true })
+
+    const needsDownload = !fs.existsSync(filePath) || fs.statSync(filePath).size < 1000
+
+    if (needsDownload) {
+      if (fs.existsSync(filePath)) {
+        console.log('Excel-Datei beschädigt oder leer — lade neu herunter...')
+        await fs.promises.unlink(filePath)
+      } else {
+        console.log(`Lade BS_Schulformen_Berufe_Lernfelder.xlsx herunter...`)
+      }
+      try {
+        await this.downloadFile(DEFAULT_DATA_URL, filePath)
+        console.log('Download abgeschlossen.')
+      } catch (err) {
+        const hint = `\nBitte die Datei manuell herunterladen und nach Input/ kopieren:\n  ${DEFAULT_DATA_URL}`
+        throw new Error(`Auto-Download fehlgeschlagen: ${err instanceof Error ? err.message : String(err)}${hint}`)
+      }
     }
-    const workbook = XLSX.readFile(filePath)
+
+    let workbook: XLSX.WorkBook
+    try {
+      workbook = XLSX.readFile(filePath)
+    } catch {
+      // Datei vorhanden aber nicht lesbar → löschen und neu versuchen
+      await fs.promises.unlink(filePath).catch(() => {})
+      console.log('Excel-Datei konnte nicht gelesen werden — lade neu herunter...')
+      try {
+        await this.downloadFile(DEFAULT_DATA_URL, filePath)
+        workbook = XLSX.readFile(filePath)
+      } catch (err2) {
+        const hint = `\nBitte die Datei manuell herunterladen und nach Input/ kopieren:\n  ${DEFAULT_DATA_URL}`
+        throw new Error(`Excel-Datei nicht lesbar: ${err2 instanceof Error ? err2.message : String(err2)}${hint}`)
+      }
+    }
+
     const sheet = workbook.Sheets['Berufe mit Lernfeldern']
     if (!sheet) {
       throw new Error('Sheet "Berufe mit Lernfeldern" nicht gefunden')
     }
     const data = XLSX.utils.sheet_to_json<{ Beruf: string; Fachkürzel: string; 'Stunden Lernfeld': number }>(sheet)
 
-    // Group by Beruf
     const berufMap = new Map<string, Map<LernfeldId, number>>()
-
     for (const row of data) {
       const name = String(row.Beruf || '').trim()
       const lfId = String(row.Fachkürzel || '').trim() as LernfeldId
       const stunden = Number(row['Stunden Lernfeld']) || 0
-
       if (!name || !lfId.startsWith('LF')) continue
-
-      if (!berufMap.has(name)) {
-        berufMap.set(name, new Map())
-      }
-
+      if (!berufMap.has(name)) berufMap.set(name, new Map())
       berufMap.get(name)!.set(lfId, stunden)
     }
 
-    // Convert to Beruf objects
     for (const [name, lernfelder] of berufMap) {
-      const beruf: Beruf = {
-        name,
-        lernfelder,
-      }
-      this.berufe.set(name.toLowerCase(), beruf)
+      this.berufe.set(name.toLowerCase(), { name, lernfelder })
     }
   }
 
