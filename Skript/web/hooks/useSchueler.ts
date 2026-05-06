@@ -30,6 +30,7 @@ export function useSchueler(halbjahrStunden: Record<string, Record<string, numbe
   const [berufName, setBerufName] = useState('')
   const [berufData, setBerufData] = useState<BerufData | null>(null)
   const [berufLoading, setBerufLoading] = useState(false)
+  const [zeugnisTyp, setZeugnisTyp] = useState<'abschluss' | 'abgang'>('abschluss')
   const [lernfelderNoten, setLernfelderNoten] = useState<Record<string, number | null>>({})
   const [allgFaecherNoten, setAllgFaecherNoten] = useState<Record<string, (number | null)[]>>(() => {
     const init: Record<string, (number | null)[]> = {}
@@ -172,6 +173,7 @@ export function useSchueler(halbjahrStunden: Record<string, Record<string, numbe
       halbjahre,
       semester,
       austritt,
+      zeugnisTyp,
       lernfelderNoten,
       allgFaecherNoten,
       halbjahrStunden,
@@ -185,6 +187,7 @@ export function useSchueler(halbjahrStunden: Record<string, Record<string, numbe
       halbjahre,
       semester,
       austritt,
+      zeugnisTyp,
       lernfelderNoten,
       allgFaecherNoten,
       halbjahrStunden,
@@ -199,6 +202,7 @@ export function useSchueler(halbjahrStunden: Record<string, Record<string, numbe
       klasse?: string
       berufName?: string
       austritt?: string
+      zeugnisTyp?: 'abschluss' | 'abgang'
       halbjahre?: string[]
       lernfelderNoten?: Record<string, number | null>
       allgFaecherNoten?: Record<string, (number | null)[]>
@@ -208,6 +212,7 @@ export function useSchueler(halbjahrStunden: Record<string, Record<string, numbe
       if (data.vorname !== undefined) setVorname(data.vorname)
       if (data.klasse !== undefined) setKlasse(data.klasse)
       if (data.austritt !== undefined) setAustritt(data.austritt)
+      if (data.zeugnisTyp) setZeugnisTyp(data.zeugnisTyp)
       if (data.halbjahre) setAnzahlHalbjahre(data.halbjahre.length)
       if (data.lernfelderNoten) setLernfelderNoten(data.lernfelderNoten)
       if (data.allgFaecherNoten) setAllgFaecherNoten(data.allgFaecherNoten)
@@ -225,6 +230,7 @@ export function useSchueler(halbjahrStunden: Record<string, Record<string, numbe
     setAnzahlHalbjahre(6)
     setBerufName('')
     setBerufData(null)
+    setZeugnisTyp('abschluss')
     setLernfelderNoten({})
     setLfStundenOverrides({})
     setErgebnis(null)
@@ -244,6 +250,8 @@ export function useSchueler(halbjahrStunden: Record<string, Record<string, numbe
     berufName,
     berufData,
     berufLoading,
+    zeugnisTyp,
+    setZeugnisTyp,
     lernfelderNoten,
     allgFaecherNoten,
     lfStundenOverrides,

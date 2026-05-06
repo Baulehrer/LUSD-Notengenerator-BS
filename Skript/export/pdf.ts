@@ -18,7 +18,12 @@ function floorTwo(x: number): number {
 export async function generatePDF(
   ergebnisse: Berechnungsergebnis[],
   outputPath: string,
-  options?: { beruf?: Beruf; halbjahre?: string[]; halbjahrStunden?: Record<string, Record<string, number>> },
+  options?: {
+    beruf?: Beruf
+    halbjahre?: string[]
+    halbjahrStunden?: Record<string, Record<string, number>>
+    zeugnisTyp?: 'abschluss' | 'abgang'
+  },
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({
@@ -68,10 +73,9 @@ function renderBBUHorizontal(
   schueler: import('../types').Schueler,
   berufData: Beruf | undefined,
 ): { y: number; gewichtung: number; stunden: number } {
-  // Collect active LF rows
+  // Collect active LF rows sorted by key
   type LFRow = { lf: string; stunden: number; note: number }
   const rows: LFRow[] = []
-  // Sort LF entries by key (LF01, LF02, ...) instead of Map insertion order
   const sortedLfEntries = [...schueler.noten.lernfelder.entries()].sort((a, b) => a[0].localeCompare(b[0]))
   for (const [lf, eintraege] of sortedLfEntries) {
     const stunden = berufData?.lernfelder.get(lf) ?? 0
@@ -83,48 +87,90 @@ function renderBBUHorizontal(
 
   if (rows.length === 0) return { y, gewichtung: 0, stunden: 0 }
 
-  // Dynamic column width: fit all into one row if possible
-  const maxX = 555
-  const startX = 50
-  const availW = maxX - startX
-  const colW = Math.max(30, Math.floor(availW / Math.min(rows.length, 12)))
-  const rowsPerGroup = Math.floor(availW / colW)
+  // Group rows by Ausbildungsjahr using cumulative Stunden
+  const AJ_GRENZEN = [
+    { label: '1. Ausbildungsjahr', maxCumulative: 320 },
+    { label: '2. Ausbildungsjahr', maxCumulative: 600 },
+    { label: '3. Ausbildungsjahr', maxCumulative: 880 },
+  ]
+  type AJGroup = { label: string; rows: LFRow[] }
+  const ajGroups: AJGroup[] = []
+  let cumulative = 0
+  let ajIdx = 0
+  let currentGroup: AJGroup = { label: AJ_GRENZEN[0]!.label, rows: [] }
 
-  // Split into groups
-  for (let g = 0; g * rowsPerGroup < rows.length; g++) {
-    const group = rows.slice(g * rowsPerGroup, (g + 1) * rowsPerGroup)
-    if (y > 700) {
+  for (const row of rows) {
+    cumulative += row.stunden
+    while (ajIdx < AJ_GRENZEN.length - 1 && cumulative > AJ_GRENZEN[ajIdx]!.maxCumulative) {
+      if (currentGroup.rows.length > 0) ajGroups.push(currentGroup)
+      ajIdx++
+      currentGroup = { label: AJ_GRENZEN[ajIdx]!.label, rows: [] }
+    }
+    currentGroup.rows.push(row)
+  }
+  if (currentGroup.rows.length > 0) ajGroups.push(currentGroup)
+
+  const startX = 50
+  const maxX = 555
+  const availW = maxX - startX
+
+  for (const ajGroup of ajGroups) {
+    if (y > 680) {
       doc.addPage()
       y = 40
     }
 
-    // Row 1: LF names (header background)
+    // AJ sub-header
+    doc.rect(startX, y, availW, 12).fillColor('#f0f0f0').fill()
     doc
-      .rect(startX, y, group.length * colW, 13)
-      .fillColor('#eeeeee')
-      .fill()
-    doc.fillColor('black').fontSize(7).font('Helvetica-Bold')
-    for (let i = 0; i < group.length; i++) {
-      doc.text(group[i]!.lf, startX + i * colW + 2, y + 2, { width: colW - 4, lineBreak: false })
-    }
-    y += 13
-
-    // Row 2: Stunden
-    doc.fontSize(7).font('Helvetica').fillColor('#444444')
-    for (let i = 0; i < group.length; i++) {
-      doc.text(`${group[i]!.stunden}h`, startX + i * colW + 2, y + 2, { width: colW - 4, lineBreak: false })
-    }
+      .fillColor('#444444')
+      .fontSize(7)
+      .font('Helvetica-Bold')
+      .text(ajGroup.label, startX + 4, y + 2, { width: availW - 8, lineBreak: false })
+    doc.fillColor('black')
     y += 12
 
-    // Row 3: Noten
-    doc.fontSize(9).font('Helvetica-Bold').fillColor('black')
-    for (let i = 0; i < group.length; i++) {
-      doc.text(String(group[i]!.note), startX + i * colW + 2, y + 2, { width: colW - 4, lineBreak: false })
-    }
-    y += 14
+    // LFs horizontal, wrap if too many
+    const colW = Math.max(28, Math.floor(availW / Math.min(ajGroup.rows.length, 14)))
+    const colsPerLine = Math.floor(availW / colW)
 
-    hline(doc, y, startX, startX + group.length * colW)
-    y += 6
+    for (let g = 0; g * colsPerLine < ajGroup.rows.length; g++) {
+      const chunk = ajGroup.rows.slice(g * colsPerLine, (g + 1) * colsPerLine)
+      if (y > 700) {
+        doc.addPage()
+        y = 40
+      }
+
+      // Row 1: LF names (header background)
+      doc
+        .rect(startX, y, chunk.length * colW, 13)
+        .fillColor('#eeeeee')
+        .fill()
+      doc.fillColor('black').fontSize(7).font('Helvetica-Bold')
+      for (let i = 0; i < chunk.length; i++) {
+        doc.text(chunk[i]!.lf, startX + i * colW + 2, y + 2, { width: colW - 4, lineBreak: false })
+      }
+      y += 13
+
+      // Row 2: Stunden
+      doc.fontSize(7).font('Helvetica').fillColor('#444444')
+      for (let i = 0; i < chunk.length; i++) {
+        doc.text(`${chunk[i]!.stunden}h`, startX + i * colW + 2, y + 2, { width: colW - 4, lineBreak: false })
+      }
+      y += 12
+
+      // Row 3: Noten
+      doc.fontSize(9).font('Helvetica-Bold').fillColor('black')
+      for (let i = 0; i < chunk.length; i++) {
+        doc.text(String(chunk[i]!.note), startX + i * colW + 2, y + 2, { width: colW - 4, lineBreak: false })
+      }
+      y += 14
+
+      hline(doc, y, startX, startX + chunk.length * colW)
+      y += 5
+    }
+
+    y += 4 // gap between AJ groups
   }
 
   const totalGewichtung = rows.reduce((s, r) => s + r.note * r.stunden, 0)
@@ -233,12 +279,19 @@ function renderAllgFaecherHorizontal(
 function renderEinzelfall(
   doc: PDFKit.PDFDocument,
   ergebnis: Berechnungsergebnis,
-  options?: { beruf?: Beruf; halbjahre?: string[]; halbjahrStunden?: Record<string, Record<string, number>> },
+  options?: {
+    beruf?: Beruf
+    halbjahre?: string[]
+    halbjahrStunden?: Record<string, Record<string, number>>
+    zeugnisTyp?: 'abschluss' | 'abgang'
+  },
 ): void {
   const { schueler } = ergebnis
   const berufData = options?.beruf
   const halbjahre = options?.halbjahre ?? schueler.halbjahre ?? []
   const stundenMap = options?.halbjahrStunden ?? DEFAULT_HALBJAHR_STUNDEN
+  const zeugnisTyp = options?.zeugnisTyp ?? 'abschluss'
+  const zeugnisLabel = zeugnisTyp === 'abgang' ? 'Abgangszeugnis' : 'Abschlusszeugnis'
 
   // ── Header: Logos ──────────────────────────────────────────────
   const logoY = 30
@@ -252,7 +305,10 @@ function renderEinzelfall(
   doc
     .fontSize(13)
     .font('Helvetica-Bold')
-    .text('Einzelfallberechnung Zeugnisnoten', 40, headerBottomY + 8, { align: 'center', width: 515 })
+    .text(`Einzelfallberechnung Zeugnisnoten — ${zeugnisLabel}`, 40, headerBottomY + 8, {
+      align: 'center',
+      width: 515,
+    })
 
   hline(doc, headerBottomY + 26)
 
@@ -266,19 +322,19 @@ function renderEinzelfall(
   doc.text(`Ausscheide-Semester: ${schueler.stufeSemester}`, 320, y)
   y += 20
 
-  // ── BBU-Tabelle (horizontal) ───────────────────────────────────
+  // ── BBU-Tabelle (horizontal, nach Ausbildungsjahr) ─────────────
   y = renderSectionHeader(doc, y, 'Berufsbezogener Unterricht (BBU)')
 
   const bbuResult = renderBBUHorizontal(doc, y, schueler, berufData)
   y = bbuResult.y
 
   const bbuRaw = bbuResult.stunden > 0 ? bbuResult.gewichtung / bbuResult.stunden : 0
-  const bbuGerundet = Math.round(bbuRaw)
+  const bbuGerundet = Math.floor(bbuRaw)
   doc
     .fontSize(9)
     .font('Helvetica-Oblique')
     .fillColor('#333333')
-    .text(`BBU-Note: ${bbuRaw.toFixed(2)} -> gerundet: ${bbuGerundet}`, 50, y)
+    .text(`BBU-Note: ${bbuRaw.toFixed(2)} -> abgerundet: ${bbuGerundet}`, 50, y)
   doc.fillColor('black')
   y += 18
 
@@ -296,7 +352,7 @@ function renderEinzelfall(
 
   doc.fontSize(10).font('Helvetica').fillColor('black')
   doc.text(`BBU-Note:    ${ergebnis.bbuNoteGerundet}`, 50, y)
-  doc.fillColor('#555555').text('(ganzzahlig, kaufmaennisch gerundet)', 200, y)
+  doc.fillColor('#555555').text('(ganzzahlig, abgerundet)', 200, y)
   doc.fillColor('black')
   y += 16
   doc.text(`Gesamtnote:  ${gesamtnoteFloor2.toFixed(2)}`, 50, y)

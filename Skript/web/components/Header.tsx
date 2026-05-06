@@ -11,12 +11,14 @@ interface Props {
   anzahlHalbjahre: number
   berufName: string
   berufLoading?: boolean
+  zeugnisTyp: 'abschluss' | 'abgang'
   onNachnameChange: (v: string) => void
   onVornameChange: (v: string) => void
   onKlasseChange: (v: string) => void
   onAustrittChange: (v: string) => void
   onHalbjahreChange: (n: number) => void
   onBerufSelect: (name: string) => void
+  onZeugnisTypChange: (v: 'abschluss' | 'abgang') => void
   theme: ThemeId
   onThemeSelect: (id: ThemeId) => void
 }
@@ -29,12 +31,14 @@ export function Header({
   anzahlHalbjahre,
   berufName,
   berufLoading,
+  zeugnisTyp,
   onNachnameChange,
   onVornameChange,
   onKlasseChange,
   onAustrittChange,
   onHalbjahreChange,
   onBerufSelect,
+  onZeugnisTypChange,
   theme,
   onThemeSelect,
 }: Props) {
@@ -62,6 +66,29 @@ export function Header({
             </option>
           ))}
         </select>
+        <label>Zeugnis:</label>
+        <div className="zeugnis-toggle">
+          <label className={`zeugnis-option${zeugnisTyp === 'abschluss' ? ' active' : ''}`}>
+            <input
+              type="radio"
+              name="zeugnisTyp"
+              value="abschluss"
+              checked={zeugnisTyp === 'abschluss'}
+              onChange={() => onZeugnisTypChange('abschluss')}
+            />
+            Abschluss
+          </label>
+          <label className={`zeugnis-option${zeugnisTyp === 'abgang' ? ' active' : ''}`}>
+            <input
+              type="radio"
+              name="zeugnisTyp"
+              value="abgang"
+              checked={zeugnisTyp === 'abgang'}
+              onChange={() => onZeugnisTypChange('abgang')}
+            />
+            Abgang
+          </label>
+        </div>
       </div>
 
       <div className="header-center">
