@@ -49,6 +49,40 @@
   min-width: 0;
 }
 
+/* Zeugnis-Toggle */
+.zeugnis-toggle {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.zeugnis-option {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  font-size: 0.82rem;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  transition:
+    background 0.15s,
+    color 0.15s,
+    border-color 0.15s;
+}
+
+.zeugnis-option input[type="radio"] {
+  display: none;
+}
+
+.zeugnis-option.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
 .header-center {
   text-align: center;
   white-space: nowrap;

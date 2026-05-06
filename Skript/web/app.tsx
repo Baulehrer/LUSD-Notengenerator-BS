@@ -111,6 +111,8 @@ function App() {
         onAustrittChange={schueler.setAustritt}
         onHalbjahreChange={schueler.setAnzahlHalbjahre}
         onBerufSelect={schueler.loadBeruf}
+        zeugnisTyp={schueler.zeugnisTyp}
+        onZeugnisTypChange={schueler.setZeugnisTyp}
         theme={theme}
         onThemeSelect={setTheme}
       />

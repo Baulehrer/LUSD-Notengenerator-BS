@@ -106,7 +106,6 @@ export function calculateSchuelerNoten(
 
   const allgFaecherResults = new Map<string, { note: number; gewichtung: number; stunden: number }>()
   for (const fach of ALLGEMEINE_FAECHER) {
-    // Extract per-halbjahr stunden for this specific fach
     const fachStd: Record<string, number> = {}
     for (const hj of Object.keys(stundenMap)) {
       fachStd[hj] = stundenMap[hj]?.[fach] ?? 0
@@ -128,7 +127,7 @@ export function calculateSchuelerNoten(
   return {
     schueler,
     bbuNote: bbuResult.note,
-    bbuNoteGerundet: roundToWholeNote(bbuResult.note),
+    bbuNoteGerundet: Math.floor(bbuResult.note),
     allgemeineFaecherNoten: allgFaecherNoten,
     gesamtnote,
     gesamtnoteGerundet: roundToWholeNote(gesamtnote),

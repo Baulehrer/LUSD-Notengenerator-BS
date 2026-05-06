@@ -205,8 +205,9 @@ export function Einstellungen({
                           <input
                             type="number"
                             min={0}
+                            step={0.5}
                             value={editHjStunden[hj]?.[fach] ?? 0}
-                            onChange={e => updateFachStunden(hj, fach, parseInt(e.target.value, 10) || 0)}
+                            onChange={e => updateFachStunden(hj, fach, parseFloat(e.target.value) || 0)}
                           />
                         </td>
                       ))}
@@ -228,10 +229,9 @@ export function Einstellungen({
                         <input
                           type="number"
                           min={0}
+                          step={0.5}
                           value={editLfStunden[lf] ?? 0}
-                          onChange={e =>
-                            setEditLfStunden(prev => ({ ...prev, [lf]: parseInt(e.target.value, 10) || 0 }))
-                          }
+                          onChange={e => setEditLfStunden(prev => ({ ...prev, [lf]: parseFloat(e.target.value) || 0 }))}
                         />
                       </Fragment>
                     )

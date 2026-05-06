@@ -30,6 +30,7 @@ function parseSchuelerFromBody(body: Record<string, unknown>): {
   halbjahre: string[]
   halbjahrStunden?: Record<string, Record<string, number>>
   lfStundenOverrides?: Map<string, number>
+  zeugnisTyp: 'abschluss' | 'abgang'
 } {
   const lfNoten = new Map<string, NoteEintrag[]>()
   const rawLf = body.lernfelderNoten as Record<string, number | null> | undefined
@@ -71,12 +72,15 @@ function parseSchuelerFromBody(body: Record<string, unknown>): {
     ? new Map(Object.entries(lfOverrides).map(([k, v]) => [k, Number(v)]))
     : undefined
 
+  const zeugnisTyp = body.zeugnisTyp === 'abgang' ? 'abgang' : 'abschluss'
+
   return {
     schueler,
     beruf,
     halbjahre,
     halbjahrStunden: body.halbjahrStunden as Record<string, Record<string, number>> | undefined,
     lfStundenOverrides,
+    zeugnisTyp,
   }
 }
 
@@ -112,7 +116,8 @@ export async function startServer(port = 3000) {
         POST: async req => {
           try {
             const body = (await req.json()) as Record<string, unknown>
-            const { schueler, beruf, halbjahre, halbjahrStunden, lfStundenOverrides } = parseSchuelerFromBody(body)
+            const { schueler, beruf, halbjahre, halbjahrStunden, lfStundenOverrides, zeugnisTyp } =
+              parseSchuelerFromBody(body)
             const ergebnis = calculateSchuelerNoten(schueler, beruf, halbjahre, halbjahrStunden, lfStundenOverrides)
 
             const austritt = (body.austritt as string) || new Date().toISOString().slice(0, 10)
@@ -124,7 +129,7 @@ export async function startServer(port = 3000) {
 
             await Bun.write(join(ROOT_DIR, 'Output', '.gitkeep'), '')
             const { generatePDF } = await import('./export/pdf')
-            await generatePDF([ergebnis], outputPath, { beruf, halbjahre, halbjahrStunden })
+            await generatePDF([ergebnis], outputPath, { beruf, halbjahre, halbjahrStunden, zeugnisTyp })
 
             const file = Bun.file(outputPath)
             return new Response(file, {
